@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a0a0a" />
+  <title>Vigilo — Private Home Security</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%9B%A1%EF%B8%8F%3C/text%3E%3C/svg%3E" />
+</head>
+<body>
+
+  <!-- ===================== LOCK SCREEN ===================== -->
+  <div id="lock-screen" class="lock-screen">
+    <div class="lock-card">
+      <div class="brand">
+        <span class="brand-mark">🛡️</span>
+        <h1>Vigilo</h1>
+      </div>
+      <p class="brand-tag">Private home security. Runs on your device, stays on your device.</p>
+
+      <!-- Set password (first run) -->
+      <form id="setup-form" class="lock-form" hidden>
+        <p class="lock-hint">Welcome! Create a password to protect this dashboard. It is stored only in this browser — there is no server and no account.</p>
+        <input type="password" id="setup-pass" placeholder="Choose a password" autocomplete="new-password" />
+        <input type="password" id="setup-pass2" placeholder="Confirm password" autocomplete="new-password" />
+        <button type="submit" class="btn btn-primary">Create &amp; Continue</button>
+        <p class="lock-error" id="setup-error"></p>
+      </form>
+
+      <!-- Unlock (returning) -->
+      <form id="unlock-form" class="lock-form" hidden>
+        <p class="lock-hint">Enter your password to unlock the dashboard.</p>
+        <input type="password" id="unlock-pass" placeholder="Password" autocomplete="current-password" />
+        <button type="submit" class="btn btn-primary">Unlock</button>
+        <p class="lock-error" id="unlock-error"></p>
+        <button type="button" id="reset-pass" class="btn-link">Forgot password? Reset (clears settings)</button>
+      </form>
+    </div>
+    <p class="lock-footer">Free &amp; open source · No cloud · No accounts · No tracking</p>
+  </div>
+
+  <!-- ===================== APP ===================== -->
+  <div id="app" class="app" hidden>
+
+    <!-- Header / Status bar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <span class="brand-mark sm">🛡️</span>
+        <span class="topbar-title">Vigilo</span>
+      </div>
+
+      <nav class="tabs" id="tabs">
+        <button class="tab active" data-tab="dashboard">Dashboard</button>
+        <button class="tab" data-tab="remote">Remote Access</button>
+        <button class="tab" data-tab="about">Help</button>
+      </nav>
+
+      <div class="topbar-right">
+        <span class="status-chip" id="status-clock">--:--:--</span>
+        <span class="status-chip" id="status-cams">0 cameras</span>
+        <span class="status-chip rec" id="status-rec" hidden><span class="dot"></span> REC</span>
+        <button class="icon-btn" id="lock-btn" title="Lock dashboard">🔒</button>
+      </div>
+    </header>
+
+    <!-- ============ DASHBOARD TAB ============ -->
+    <main class="view active" id="view-dashboard">
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <button class="btn btn-primary" id="start-btn">Enable Cameras</button>
+          <button class="btn" id="refresh-btn" title="Re-scan for cameras">↻ Re-scan</button>
+        </div>
+        <div class="toolbar-right">
+          <label class="switch-label">
+            <span>Notify on motion</span>
+            <span class="switch"><input type="checkbox" id="notify-toggle" /><span class="slider"></span></span>
+          </label>
+          <label class="switch-label">
+            <span>Motion-only recording</span>
+            <span class="switch"><input type="checkbox" id="motion-rec-toggle" /><span class="slider"></span></span>
+          </label>
+        </div>
+      </div>
+
+      <div id="empty-state" class="empty-state">
+        <div class="empty-icon">📷</div>
+        <h2>No cameras running yet</h2>
+        <p>Click <strong>Enable Cameras</strong> and allow camera access. Vigilo will detect every connected webcam and show them all here.</p>
+        <p class="muted">Nothing is uploaded anywhere — feeds stay in this browser tab.</p>
+      </div>
+
+      <div id="camera-grid" class="camera-grid"></div>
+    </main>
+
+    <!-- ============ REMOTE ACCESS TAB ============ -->
+    <section class="view" id="view-remote">
+      <div class="doc">
+        <h2>Watch your cameras from anywhere</h2>
+        <p>Vigilo has no cloud — by design. To reach your cameras when you are away from home, you create your own private, encrypted network with <strong>Tailscale</strong>. It is free for personal use and takes about 5 minutes.</p>
+
+        <div class="callout">
+          <strong>How it works:</strong> Tailscale connects your phone and the computer running Vigilo over an encrypted tunnel, as if they were on the same Wi-Fi — even across the internet. Your video never touches anyone else's servers.
+        </div>
+
+        <h3>Step 1 — Install Tailscale on the host computer</h3>
+        <p>This is the computer running <code>python -m http.server</code> with your cameras plugged in.</p>
+        <ol>
+          <li>Go to <a href="https://tailscale.com/download" target="_blank" rel="noopener">tailscale.com/download</a> and install it.</li>
+          <li>Sign in (Google, Microsoft, GitHub, or email — this only authenticates your devices).</li>
+          <li>After it connects, note the device's Tailscale IP — it looks like <code>100.x.x.x</code>. You can see it in the Tailscale app or by running <code>tailscale ip -4</code>.</li>
+        </ol>
+
+        <h3>Step 2 — Install Tailscale on your phone / laptop</h3>
+        <ol>
+          <li>Install the Tailscale app on the device you want to watch from
+            (<a href="https://apps.apple.com/app/tailscale/id1470499037" target="_blank" rel="noopener">iOS</a> ·
+             <a href="https://play.google.com/store/apps/details?id=com.tailscale.ipn" target="_blank" rel="noopener">Android</a>).</li>
+          <li>Sign in with the <strong>same account</strong> you used in Step 1.</li>
+        </ol>
+
+        <h3>Step 3 — Start Vigilo so it listens on the network</h3>
+        <p>On the host computer, start the server bound to all interfaces:</p>
+        <pre><code>python -m http.server 8000 --bind 0.0.0.0</code></pre>
+
+        <h3>Step 4 — Open it from your phone</h3>
+        <p>In your phone's browser, with Tailscale switched on, go to:</p>
+        <pre><code>http://<span class="hl">100.x.x.x</span>:8000</code></pre>
+        <p>Replace <code>100.x.x.x</code> with the host's Tailscale IP from Step 1. Bookmark it. That's it — encrypted access to your cameras from anywhere.</p>
+
+        <div class="callout warn">
+          <strong>Camera access needs a secure context.</strong> Browsers only allow camera use on <code>https://</code> or on <code>localhost</code>. Over a plain Tailscale IP you can <em>view the dashboard</em>, but to grant <em>new</em> camera permissions on a remote device you'll want HTTPS. The easiest path is Tailscale's built-in HTTPS:
+          <pre><code>tailscale cert        # one-time, enables HTTPS for your tailnet
+tailscale serve https / http://localhost:8000</code></pre>
+          Then open <code>https://your-machine.your-tailnet.ts.net</code>. See <a href="https://tailscale.com/kb/1153/enabling-https" target="_blank" rel="noopener">Tailscale HTTPS docs</a>.
+        </div>
+
+        <h3>Same Wi-Fi only? Even simpler</h3>
+        <p>If the viewing device is on the <strong>same Wi-Fi</strong> as the host, you don't need Tailscale at all. Find the host's local IP (e.g. <code>192.168.1.50</code>) and open <code>http://192.168.1.50:8000</code> on your phone.</p>
+      </div>
+    </section>
+
+    <!-- ============ HELP / ABOUT TAB ============ -->
+    <section class="view" id="view-about">
+      <div class="doc">
+        <h2>About Vigilo</h2>
+        <p>Vigilo turns the webcams you already own into a private security system. It runs entirely in your browser. There is no backend, no sign-up, and nothing leaves your device.</p>
+
+        <h3>Quick tips</h3>
+        <ul>
+          <li><strong>Enable Cameras</strong> grants access and shows every detected webcam.</li>
+          <li>Each tile has its own <strong>motion sensitivity</strong> slider and on/off toggle.</li>
+          <li>Double-click (or use ⛶) on a tile to go <strong>fullscreen</strong>.</li>
+          <li><strong>Rename</strong> a camera by clicking its name.</li>
+          <li><strong>Record</strong> saves video to your Downloads folder. Recordings auto-split every 2 hours.</li>
+          <li><strong>Motion-only recording</strong> records solely while motion is detected.</li>
+        </ul>
+
+        <h3>What Vigilo does <em>not</em> do</h3>
+        <ul class="no-list">
+          <li>No cloud storage or streaming through anyone's servers.</li>
+          <li>No accounts, no email, no telemetry, no analytics.</li>
+          <li>No external requests — it works fully offline.</li>
+          <li>Your password and settings live in this browser's localStorage only.</li>
+        </ul>
+
+        <div class="callout">
+          Vigilo is free and open source under the MIT license. Tinker with it, audit it, make it yours.
+        </div>
+      </div>
+    </section>
+
+    <!-- Toast / notification area -->
+    <div id="toast-stack" class="toast-stack"></div>
+  </div>
+
+  <!-- Hidden template for a camera tile -->
+  <template id="camera-tile-template">
+    <article class="cam-tile" data-state="off">
+      <div class="cam-video-wrap">
+        <video class="cam-video" autoplay playsinline muted></video>
+        <canvas class="cam-canvas" hidden></canvas>
+        <div class="cam-overlay">
+          <span class="cam-badge motion-badge" hidden>● MOTION</span>
+          <span class="cam-badge rec-badge" hidden><span class="dot"></span> REC</span>
+        </div>
+        <div class="cam-offline">
+          <span>Camera off</span>
+        </div>
+      </div>
+      <div class="cam-bar">
+        <input class="cam-name" value="Camera" spellcheck="false" />
+        <div class="cam-actions">
+          <button class="icon-btn cam-toggle" title="Turn camera on/off">⏻</button>
+          <button class="icon-btn cam-record" title="Start/stop recording">⏺</button>
+          <button class="icon-btn cam-fs" title="Fullscreen">⛶</button>
+        </div>
+      </div>
+      <div class="cam-controls">
+        <label class="sens-row">
+          <span>Motion sensitivity</span>
+          <input type="range" class="cam-sens" min="1" max="100" value="40" />
+        </label>
+      </div>
+    </article>
+  </template>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
