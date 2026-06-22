@@ -23,17 +23,28 @@ Usage
 No dependencies beyond Python's standard library (and `openssl`, which
 ships with macOS/Linux and Git-for-Windows, to mint the certificate).
 Nothing is uploaded anywhere — the server runs entirely on your machine.
+
+It also runs a tiny in-memory "relay" (the /api/* endpoints) that lets a
+remote device (your phone over Tailscale) auto-connect to this computer's
+cameras and control them — no copy/paste codes. The relay only passes the
+initial WebRTC handshake; the actual video and commands flow directly
+device-to-device. Nothing is stored on disk and nothing leaves your machine.
 """
 
 import argparse
 import functools
 import http.server
+import json
 import os
 import shutil
 import socket
 import ssl
 import subprocess
 import sys
+import threading
+import time
+import uuid
+from urllib.parse import urlparse, parse_qs
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CERT_DIR = os.path.join(HERE, ".vigilo-cert")
@@ -109,9 +120,144 @@ def ensure_cert(ip):
     return True
 
 
+# ----- signaling relay -----------------------------------------------------
+#
+# A minimal in-memory message switchboard so a phone can auto-connect to this
+# computer's cameras. The host (this computer's dashboard) and each viewer
+# (phone/laptop) "join", then exchange a one-time WebRTC offer/answer through
+# here. After that, video + control flow peer-to-peer and the relay is idle.
+# Everything is in RAM; nothing is written to disk.
+
+CLIENT_TTL = 30          # seconds before an unseen client is dropped
+POLL_TIMEOUT = 25        # seconds a long-poll waits for a message
+
+_lock = threading.Lock()
+_clients = {}            # id -> {"role": str, "seen": float}
+_mailboxes = {}          # id -> [ {from,type,data}, ... ]
+_host_id = None          # id of the current "home hub"
+
+
+def _prune(now):
+    global _host_id
+    for cid in [c for c, info in _clients.items() if now - info["seen"] > CLIENT_TTL]:
+        _clients.pop(cid, None)
+        _mailboxes.pop(cid, None)
+        if cid == _host_id:
+            _host_id = None
+
+
 # ----- server --------------------------------------------------------------
 
 class Handler(http.server.SimpleHTTPRequestHandler):
+    # ---- shared helpers ----
+    def _read_json(self):
+        try:
+            length = int(self.headers.get("Content-Length", 0))
+        except ValueError:
+            length = 0
+        raw = self.rfile.read(length) if length else b""
+        try:
+            return json.loads(raw or b"{}")
+        except (ValueError, TypeError):
+            return {}
+
+    def _send_json(self, obj, code=200):
+        body = json.dumps(obj).encode("utf-8")
+        self.send_response(code)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        try:
+            self.wfile.write(body)
+        except (BrokenPipeError, ConnectionResetError):
+            pass
+
+    # ---- relay endpoints ----
+    def _api_get(self, parsed):
+        global _host_id
+        if parsed.path == "/api/presence":
+            with _lock:
+                _prune(time.time())
+                self._send_json({"hostOnline": _host_id is not None})
+            return
+
+        if parsed.path == "/api/poll":
+            cid = (parse_qs(parsed.query).get("id") or [""])[0]
+            deadline = time.time() + POLL_TIMEOUT
+            while True:
+                with _lock:
+                    now = time.time()
+                    _prune(now)
+                    if cid not in _clients:
+                        self._send_json({"messages": [], "hostOnline": _host_id is not None,
+                                         "expired": True})
+                        return
+                    _clients[cid]["seen"] = now
+                    msgs = _mailboxes.get(cid) or []
+                    if msgs or time.time() >= deadline:
+                        _mailboxes[cid] = []
+                        self._send_json({"messages": msgs, "hostOnline": _host_id is not None})
+                        return
+                time.sleep(0.3)
+
+        self._send_json({"error": "unknown"}, 404)
+
+    def _api_post(self, parsed):
+        global _host_id
+        data = self._read_json()
+        now = time.time()
+
+        if parsed.path == "/api/join":
+            with _lock:
+                _prune(now)
+                cid = uuid.uuid4().hex[:12]
+                if data.get("role") == "host":
+                    _host_id = cid          # newest host takes the hub slot
+                _clients[cid] = {"role": data.get("role"), "seen": now}
+                _mailboxes[cid] = []
+                self._send_json({"id": cid, "hostOnline": _host_id is not None})
+            return
+
+        if parsed.path == "/api/leave":
+            with _lock:
+                cid = data.get("id")
+                _clients.pop(cid, None)
+                _mailboxes.pop(cid, None)
+                if cid == _host_id:
+                    _host_id = None
+                self._send_json({"ok": True})
+            return
+
+        if parsed.path == "/api/send":
+            with _lock:
+                _prune(now)
+                target = _host_id if data.get("to") == "host" else data.get("to")
+                if target and target in _mailboxes:
+                    _mailboxes[target].append({
+                        "from": data.get("from"),
+                        "type": data.get("type"),
+                        "data": data.get("data"),
+                    })
+                    self._send_json({"ok": True})
+                else:
+                    self._send_json({"ok": False, "error": "no-recipient"})
+            return
+
+        self._send_json({"error": "unknown"}, 404)
+
+    # ---- HTTP verbs ----
+    def do_GET(self):
+        parsed = urlparse(self.path)
+        if parsed.path.startswith("/api/"):
+            return self._api_get(parsed)
+        return super().do_GET()
+
+    def do_POST(self):
+        parsed = urlparse(self.path)
+        if parsed.path.startswith("/api/"):
+            return self._api_post(parsed)
+        self.send_error(404, "Not found")
+
     def send_head(self):
         # Never serve the certificate/private key over the network.
         if ".vigilo-cert" in self.path:
@@ -161,6 +307,10 @@ def run(host, port, use_https, ip):
     else:
         print(c("  Plain HTTP: cameras work on THIS computer only.", "33"))
         print(c("  For phone/remote camera access, run without --http.", "33"))
+    print(c("  " + bar, "90"))
+    print(c("  📡 Remote control is ON. On this computer, open the", "32"))
+    print(c("     Dashboard and switch on 'Home Hub'. Then open the same", "32"))
+    print(c("     address on your phone to watch & control from anywhere.", "32"))
     print(c("  " + bar, "90"))
     print(c("  Press Ctrl+C to stop.", "90"))
     print()
