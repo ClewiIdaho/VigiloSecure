@@ -73,20 +73,35 @@ That's it. No Node, no npm, no build step, no dependencies to download.
 
 ---
 
-## View from another device on the same Wi-Fi
+## View from your phone or another device
 
-Want to watch from your phone while the cameras run on a laptop? If both are on the **same Wi-Fi**, no extra software is needed.
+Want to watch from your phone while the cameras run on a laptop? Use the included launcher — it serves Vigilo over **HTTPS** so the camera works on *any* device, not just the host:
 
-1. On the **host computer**, start the server so other devices can reach it:
-   ```bash
-   python -m http.server 8000 --bind 0.0.0.0
-   ```
-2. Find the host's local IP address:
-   - **Windows:** `ipconfig` → look for *IPv4 Address* (e.g. `192.168.1.50`)
-   - **macOS/Linux:** `ipconfig getifaddr en0` or `hostname -I`
-3. On your phone's browser, go to `http://192.168.1.50:8000` (use your host's actual IP).
+```bash
+python serve.py
+```
+(Use `python3 serve.py` if `python` isn't found.)
 
-> ⚠️ Granting **new** camera permissions on a remote device requires a secure context (HTTPS or localhost). On a plain local IP you can view the dashboard fine; for remote camera permission grants, use the Tailscale HTTPS method below.
+It auto-creates a self-signed certificate, listens on every network interface, and prints two addresses:
+
+```
+On this computer : https://localhost:8443
+On your phone    : https://192.168.1.50:8443   ← your host's real IP
+```
+
+On your phone (same Wi-Fi, or over Tailscale — see below), open the **phone** address. The first visit shows a "not secure" warning — that's expected for a self-signed certificate. Tap **Advanced → Proceed/Continue** once, and the camera will work because the page is now HTTPS.
+
+> 💡 **Why HTTPS?** Browsers only allow camera access (`getUserMedia`) on `https://` or `localhost`. That's why `http://localhost:8000` works on the host but `http://<ip>:8000` fails on a phone — the phone is on a plain-HTTP origin, so the browser disables the camera. `serve.py` gives every device a secure origin. The dashboard even shows a banner explaining this if you ever land on an insecure address.
+
+**Just want plain HTTP on the host only?** The original one-liner still works for local use:
+```bash
+python -m http.server 8000 --bind 0.0.0.0
+```
+…but cameras will only grant on `localhost`/HTTPS, so phones can view the page without live camera permissions. Prefer `serve.py` for multi-device.
+
+**Finding your host's IP** (if you need it manually):
+- **Windows:** `ipconfig` → *IPv4 Address* (e.g. `192.168.1.50`)
+- **macOS/Linux:** `ipconfig getifaddr en0` or `hostname -I`
 
 ---
 
@@ -96,13 +111,13 @@ To reach your cameras when you're away from home — without any cloud — Vigil
 
 1. **Install Tailscale on the host computer** (the one running the server): [tailscale.com/download](https://tailscale.com/download). Sign in. Note its Tailscale IP (`100.x.x.x`) via `tailscale ip -4`.
 2. **Install Tailscale on your phone/laptop** and sign in with the **same account**.
-3. **Start the server** on the host: `python -m http.server 8000 --bind 0.0.0.0`
-4. **Open** `http://100.x.x.x:8000` on your phone (with Tailscale on).
+3. **Start the server** on the host: `python serve.py`
+4. **Open** `https://100.x.x.x:8443` on your phone (with Tailscale on), and accept the one-time certificate warning. Because `serve.py` serves HTTPS, cameras work right away — no extra steps.
 
-For camera permissions on remote devices, enable Tailscale's free HTTPS:
+Prefer a trusted certificate with no browser warning? Use Tailscale's free HTTPS instead:
 ```bash
 tailscale cert
-tailscale serve https / http://localhost:8000
+tailscale serve https / http://localhost:8000   # with: python -m http.server 8000
 ```
 Then visit `https://your-machine.your-tailnet.ts.net`. See the [Tailscale HTTPS docs](https://tailscale.com/kb/1153/enabling-https).
 
@@ -126,6 +141,7 @@ The password lock is convenience-grade snooping protection stored in your browse
 
 ```
 VigiloSecure/
+├── serve.py        # One-command HTTPS launcher (works on any device)
 ├── index.html      # App shell: lock screen, dashboard, tabs
 ├── style.css       # Dark, mobile-first theme
 ├── app.js          # Bootstrap & orchestration
@@ -167,7 +183,8 @@ Use Chrome or Firefox for the full feature set.
 
 ## Troubleshooting
 
-- **Cameras won't start / "Permission denied".** Make sure you opened `http://localhost:8000`, not the file directly. Allow camera access in the browser prompt (and in the site permissions if you previously blocked it).
+- **Works on the host, but the camera is dead on my phone.** This is the #1 gotcha: browsers block cameras on plain `http://<ip>` addresses. Run `python serve.py` on the host and open the **https://** address it prints on your phone (accept the one-time certificate warning). The dashboard shows a yellow banner whenever you're on an insecure address.
+- **Cameras won't start / "Permission denied".** Make sure you opened `http://localhost:8000` (or an `https://` address from `serve.py`), not the file directly. Allow camera access in the browser prompt (and in the site permissions if you previously blocked it).
 - **"In use by another app".** Close other apps using the webcam (Zoom, Teams, etc.), then click **Re-scan**.
 - **No cameras detected.** Plug in the webcam and click **Re-scan**. Built-in laptop cameras are detected automatically.
 - **No motion notifications.** Toggle *Notify on motion* and allow notifications when prompted. Some browsers suppress notifications on insecure origins.
