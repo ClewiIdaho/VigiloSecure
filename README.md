@@ -28,7 +28,7 @@ If you have a laptop with a built-in webcam, or a few USB webcams, you already h
 - **Per-camera controls** — nickname each camera, toggle it on/off, and click to go fullscreen.
 - **Clean dark UI** — modern security-app look, fully mobile responsive.
 - **Password lock** — a simple password gate stored only in your browser (no server, no account).
-- **Remote access guide** — built-in step-by-step instructions for free, encrypted remote viewing via Tailscale.
+- **Remote access (Home Hub)** — turn the camera computer into a hub; watch **and fully control** it from your phone (record, sensitivity, on/off, rename) with auto-connect — no codes. Private peer-to-peer over your own Tailscale network, no cloud.
 
 ---
 
@@ -105,52 +105,56 @@ python -m http.server 8000 --bind 0.0.0.0
 
 ---
 
-## Remote viewing from anywhere
+## Remote access from anywhere — the Home Hub
 
-Vigilo can stream the **host computer's cameras** straight to a phone or laptop using **WebRTC peer-to-peer** — the video travels directly between your two devices and never touches any server. There are two pieces:
+Vigilo works like a private version of a smart-home app. One device — the computer with the webcams — becomes your **Home Hub**. Any other device (your phone, a laptop) connects to it **automatically** and gets the *full dashboard*: live video, motion alerts, recording, and every setting — from anywhere. **No codes to copy. Connect once, it just works.**
 
-1. **Pairing** (built into the **Remote Access** tab) connects the two devices.
-2. **Tailscale** (optional) lets them find each other across the internet.
+### How it works
 
-### Pairing — Host & Viewer
+- `serve.py` runs a tiny **local relay** on your home computer. It introduces your phone to your Home Hub and passes a one-time WebRTC handshake — then steps out of the way.
+- After that, **video and your commands flow directly phone ↔ computer** (peer-to-peer, encrypted). The relay never sees your video, and nothing touches any third-party server. The relay lives only on your machine, reachable only over your own network/Tailscale.
 
-The device **with the cameras** is the **Host**; the device you **watch from** is the **Viewer**.
+### Set it up (about 2 minutes)
 
-1. On the **Host** (the computer with webcams): enable your cameras on the Dashboard, open **Remote Access → Host**, click **Create invite code**, and copy it.
-2. Send that code to your other device (paste into a note, message, etc.).
-3. On the **Viewer** (phone/laptop): open Vigilo → **Remote Access → Viewer**, paste the invite code, click **Generate reply code**, and copy the reply.
-4. Paste the reply code back on the **Host** and click **Connect**.
+1. **On the computer with the cameras** (your Home Hub):
+   ```bash
+   python serve.py
+   ```
+   Open the address it prints, enable your cameras, then switch on **📡 Home Hub** in the Dashboard toolbar.
+2. **On your phone**: open the **same address** (over Tailscale when you're away — see below). Vigilo detects the hub and connects automatically. You land right on the live cameras, with full control:
+   - ▶️ **Live video** of every camera on the home computer.
+   - 🔴 **Record** — and choose where to save: **Home** (the always-on computer), **Phone**, or **Both**.
+   - 🎚️ **Motion sensitivity**, **on/off**, and **rename** — all applied on the home computer in real time.
+   - 🟢 Live **motion** and **recording** indicators.
 
-The Host's live camera feeds now appear on the Viewer. This works on the same Wi-Fi out of the box; for internet access, do the pairing while both devices are on Tailscale (below).
+> Only one device needs to be the Home Hub. Everything else is a viewer. If the connection drops, viewers reconnect on their own.
 
-> The pairing code is a one-time handshake (an encrypted WebRTC offer/answer). It carries no video — it just lets the two devices open a direct, encrypted connection. No code or video is ever sent to a third party.
+### Tailscale — reach your hub across the internet
 
-### Tailscale — connect across the internet
+To connect when you're away from home — without any cloud — use **Tailscale**, a free, encrypted private network:
 
-To reach your cameras when you're away from home — without any cloud — Vigilo recommends **Tailscale**, a free, encrypted private network. The app has a built-in **Remote Access** tab with these steps, summarized here:
+1. **Install Tailscale on the home computer**: [tailscale.com/download](https://tailscale.com/download). Sign in. Note its Tailscale IP (`100.x.x.x`) via `tailscale ip -4`.
+2. **Install Tailscale on your phone** and sign in with the **same account**.
+3. **Start the hub**: `python serve.py` on the home computer, and turn on 📡 Home Hub.
+4. **On your phone** (Tailscale on), open `https://100.x.x.x:8443`, accept the one-time self-signed-certificate warning (**Advanced → Proceed**), and it connects automatically.
 
-1. **Install Tailscale on the host computer** (the one running the server): [tailscale.com/download](https://tailscale.com/download). Sign in. Note its Tailscale IP (`100.x.x.x`) via `tailscale ip -4`.
-2. **Install Tailscale on your phone/laptop** and sign in with the **same account**.
-3. **Start the server** on the host: `python serve.py`
-4. **Open** `https://100.x.x.x:8443` on your phone (with Tailscale on), and accept the one-time certificate warning. Because `serve.py` serves HTTPS, cameras work right away — no extra steps.
-
-Prefer a trusted certificate with no browser warning? Use Tailscale's free HTTPS instead:
+Prefer a trusted certificate with no warning? Use Tailscale's free HTTPS instead:
 ```bash
 tailscale cert
-tailscale serve https / http://localhost:8000   # with: python -m http.server 8000
+tailscale serve https / http://localhost:8443
 ```
 Then visit `https://your-machine.your-tailnet.ts.net`. See the [Tailscale HTTPS docs](https://tailscale.com/kb/1153/enabling-https).
 
-Your video travels only through Tailscale's end-to-end encrypted tunnel directly between your devices — it never touches anyone else's servers.
+Your video travels only directly between your own devices over your encrypted Tailscale network — it never touches anyone else's servers.
 
 ---
 
 ## What this app does **NOT** do — by design
 
-- ❌ **No cloud storage or streaming.** Footage never goes to any server.
+- ❌ **No cloud.** No footage, accounts, or settings on anyone's servers. The only "server" is the small relay that runs on *your own* computer.
 - ❌ **No accounts, email, or sign-ups.** Nothing to register.
-- ❌ **No telemetry, analytics, or tracking.** Zero external requests.
-- ❌ **No background/always-on recording when the tab is closed.** It runs while the page is open in your browser.
+- ❌ **No telemetry, analytics, or tracking.** No third-party requests, ever.
+- ❌ **No background/always-on recording when the tab is closed.** The Home Hub records while its dashboard is open.
 - ❌ **No AI person/face recognition.** Motion detection is simple pixel-difference comparison, done locally.
 
 The password lock is convenience-grade snooping protection stored in your browser's localStorage — it is **not** a replacement for locking your actual computer.
@@ -161,14 +165,14 @@ The password lock is convenience-grade snooping protection stored in your browse
 
 ```
 VigiloSecure/
-├── serve.py        # One-command HTTPS launcher (works on any device)
+├── serve.py        # HTTPS launcher + tiny local relay for remote access
 ├── index.html      # App shell: lock screen, dashboard, tabs
 ├── style.css       # Dark, mobile-first theme
 ├── app.js          # Bootstrap & orchestration
 ├── camera.js       # Camera class (stream + tile + motion + recording)
 ├── motion.js       # Canvas frame-difference motion detection
 ├── recorder.js     # MediaRecorder wrapper with 2-hour rolling clips
-├── webrtc.js       # Peer-to-peer camera streaming (Host/Viewer)
+├── remote.js       # Home Hub + auto-connecting remote viewer (WebRTC)
 ├── notify.js       # Browser notifications + in-app toasts
 ├── auth.js         # Serverless salted-hash password gate
 ├── store.js        # localStorage settings persistence

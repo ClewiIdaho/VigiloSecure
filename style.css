@@ -375,6 +375,40 @@ input[type="range"]::-moz-range-thumb {
   color: var(--warn); word-break: break-all;
 }
 
+/* Viewer banner = green (it's good news, you're connected) */
+.viewer-banner {
+  background: rgba(0,255,136,.07);
+  border-color: rgba(0,255,136,.3);
+  align-items: center;
+}
+.viewer-banner .banner-body strong { color: var(--accent); }
+.viewer-banner .btn { margin-left: auto; flex-shrink: 0; }
+
+/* Hub status chip */
+.status-chip.hub { color: var(--accent); border-color: rgba(0,255,136,.4); }
+
+/* Remote status panel (Remote Access tab) */
+.remote-status-row { display: flex; align-items: center; gap: 10px; }
+.remote-status-row strong { font-size: 16px; }
+.remote-dot {
+  width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0;
+  background: var(--text-mute);
+}
+.remote-dot.green { background: var(--accent); box-shadow: 0 0 8px rgba(0,255,136,.6); }
+.remote-dot.amber { background: var(--warn); }
+.remote-dot.grey  { background: var(--text-mute); }
+#remote-detail { margin: 8px 0 0; }
+#remote-actions { margin-top: 12px; display: flex; gap: 10px; flex-wrap: wrap; }
+#remote-actions:empty { display: none; }
+
+/* Recording-target selector on remote tiles */
+.rec-target {
+  background: var(--card-2); color: var(--text);
+  border: 1px solid var(--border-2); border-radius: var(--radius-sm);
+  font-size: 12px; padding: 0 6px; height: 36px; cursor: pointer;
+}
+.rec-target:focus { outline: none; border-color: var(--accent-dim); }
+
 /* ============================================================
    TOASTS
    ============================================================ */

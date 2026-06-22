@@ -60,6 +60,7 @@
         <span class="status-chip" id="status-clock">--:--:--</span>
         <span class="status-chip" id="status-cams">0 cameras</span>
         <span class="status-chip rec" id="status-rec" hidden><span class="dot"></span> REC</span>
+        <span class="status-chip hub" id="status-hub" hidden>📡 Hub</span>
         <button class="icon-btn" id="lock-btn" title="Lock dashboard">🔒</button>
       </div>
     </header>
@@ -76,12 +77,26 @@
         </div>
       </div>
 
+      <!-- Shown on the phone/laptop when it's viewing the Home Hub remotely. -->
+      <div id="viewer-banner" class="banner viewer-banner" hidden>
+        <span class="banner-icon">📡</span>
+        <div class="banner-body">
+          <strong id="viewer-banner-title">Connecting to your Home Hub…</strong>
+          <span id="viewer-banner-msg">Looking for the computer with your cameras.</span>
+        </div>
+        <button class="btn" id="viewer-exit">Use this device's cameras instead</button>
+      </div>
+
       <div class="toolbar">
         <div class="toolbar-left">
           <button class="btn btn-primary" id="start-btn">Enable Cameras</button>
           <button class="btn" id="refresh-btn" title="Re-scan for cameras">↻ Re-scan</button>
         </div>
         <div class="toolbar-right">
+          <label class="switch-label" id="hub-label" title="Share this computer's cameras to your phone" hidden>
+            <span>📡 Home Hub</span>
+            <span class="switch"><input type="checkbox" id="hub-toggle" /><span class="slider"></span></span>
+          </label>
           <label class="switch-label">
             <span>Notify on motion</span>
             <span class="switch"><input type="checkbox" id="notify-toggle" /><span class="slider"></span></span>
@@ -106,54 +121,37 @@
     <!-- ============ REMOTE ACCESS TAB ============ -->
     <section class="view" id="view-remote">
       <div class="doc">
-        <h2>Watch your cameras on another device</h2>
-        <p>Vigilo can stream the cameras from <strong>this computer</strong> directly to a phone or laptop — peer to peer, end to end, with nothing going through any server. You connect the two devices once with a pairing code.</p>
+        <h2>Watch &amp; control from your phone</h2>
+        <p>One device — the computer with the webcams — becomes your <strong>Home Hub</strong>. Any other device (your phone, a laptop) connects to it automatically and gives you the <em>full dashboard</em>: live video, motion alerts, recording, and every setting — from anywhere. No codes to copy. Connect once, it just works.</p>
+
+        <!-- Live status panel (filled in by app.js) -->
+        <div class="stream-card" id="remote-panel">
+          <div class="remote-status-row">
+            <span class="remote-dot" id="remote-dot"></span>
+            <strong id="remote-headline">Checking remote access…</strong>
+          </div>
+          <p id="remote-detail" class="muted"></p>
+          <div id="remote-actions"></div>
+        </div>
 
         <div class="callout">
-          <strong>How pairing works:</strong> the device <em>with the cameras</em> is the <strong>Host</strong>. The device you want to <em>watch from</em> is the <strong>Viewer</strong>. The Host makes an invite code, the Viewer replies with a code, you paste it back — done. For watching across the internet, do this while both devices are on <strong>Tailscale</strong> (setup steps further down).
+          <strong>The 2-minute setup:</strong>
+          <ol style="margin:8px 0 0 20px">
+            <li>On the <strong>computer with cameras</strong>: run <code>python serve.py</code>, open the address it prints, enable your cameras, then flip on <strong>📡 Home Hub</strong> on the Dashboard.</li>
+            <li>On your <strong>phone</strong>: open the same address (over Tailscale when away). Vigilo detects the hub and connects automatically — you'll land right on the live cameras.</li>
+          </ol>
+          For this to work, the computer must be started with <code>python serve.py</code> (the plain <code>python -m http.server</code> doesn't include the connection helper).
         </div>
 
-        <!-- ---- Streaming: HOST ---- -->
-        <div class="stream-card">
-          <h3>📡 Host — share this computer's cameras</h3>
-          <p>Do this on the computer that has the webcams. <strong>Enable your cameras on the Dashboard first.</strong></p>
-          <button class="btn btn-primary" id="host-start">Create invite code</button>
-          <div id="host-flow" hidden>
-            <label class="code-label">1. Copy this invite code and send it to your other device:</label>
-            <textarea class="code-box" id="host-offer" readonly rows="3"></textarea>
-            <button class="btn" id="host-offer-copy">Copy invite code</button>
-            <label class="code-label">2. Paste the reply code from your Viewer here:</label>
-            <textarea class="code-box" id="host-answer" rows="3" placeholder="Paste the Viewer's reply code…"></textarea>
-            <button class="btn btn-primary" id="host-connect">Connect</button>
-            <p class="stream-status" id="host-status"></p>
-          </div>
-        </div>
-
-        <!-- ---- Streaming: VIEWER ---- -->
-        <div class="stream-card">
-          <h3>📱 Viewer — watch from this device</h3>
-          <p>Do this on the phone or laptop you want to watch from.</p>
-          <label class="code-label">1. Paste the invite code from the Host:</label>
-          <textarea class="code-box" id="viewer-offer" rows="3" placeholder="Paste the Host's invite code…"></textarea>
-          <button class="btn btn-primary" id="viewer-generate">Generate reply code</button>
-          <div id="viewer-flow" hidden>
-            <label class="code-label">2. Copy this reply code and paste it back on the Host:</label>
-            <textarea class="code-box" id="viewer-answer" readonly rows="3"></textarea>
-            <button class="btn" id="viewer-answer-copy">Copy reply code</button>
-            <p class="stream-status" id="viewer-status"></p>
-          </div>
-          <div id="remote-grid" class="camera-grid stream-grid"></div>
-        </div>
-
-        <h2 style="margin-top:32px">Reaching the devices over the internet (Tailscale)</h2>
-        <p>Vigilo has no cloud — by design. To pair when you are away from home, both devices join your own private, encrypted network with <strong>Tailscale</strong>. It is free for personal use and takes about 5 minutes.</p>
+        <h2 style="margin-top:32px">Reaching your phone from anywhere (Tailscale)</h2>
+        <p>Vigilo has no cloud — by design. To connect when you are away from home, both devices join your own private, encrypted network with <strong>Tailscale</strong>. It is free for personal use and takes about 5 minutes.</p>
 
         <div class="callout">
           <strong>How it works:</strong> Tailscale connects your phone and the computer running Vigilo over an encrypted tunnel, as if they were on the same Wi-Fi — even across the internet. Your video never touches anyone else's servers.
         </div>
 
         <h3>Step 1 — Install Tailscale on the host computer</h3>
-        <p>This is the computer running <code>python -m http.server</code> with your cameras plugged in.</p>
+        <p>This is the computer running <code>python serve.py</code> with your cameras plugged in (your Home Hub).</p>
         <ol>
           <li>Go to <a href="https://tailscale.com/download" target="_blank" rel="noopener">tailscale.com/download</a> and install it.</li>
           <li>Sign in (Google, Microsoft, GitHub, or email — this only authenticates your devices).</li>
@@ -179,9 +177,9 @@
         <p>Replace <code>100.x.x.x</code> with the host's Tailscale IP from Step 1. The first visit shows a one-time "not secure" warning (self-signed certificate) — tap <strong>Advanced → Proceed</strong>. Bookmark it. That's it — encrypted access to your cameras from anywhere.</p>
 
         <div class="callout">
-          <strong>Two ways to watch remotely:</strong> with peer-to-peer <strong>pairing</strong> (above), the Host runs on its own <code>localhost</code> so its cameras work normally, and the Viewer only <em>receives</em> video — so plain <code>http://100.x.x.x:8000</code> is enough on the Viewer. If instead you want each device to use <em>its own</em> camera over the network, run <code>python serve.py</code> on the host for automatic HTTPS (browsers only expose cameras on <code>https://</code> or <code>localhost</code>). Prefer a certificate with no browser warning at all? Use Tailscale's built-in HTTPS:
+          <strong>About that certificate warning:</strong> <code>serve.py</code> uses a self-signed certificate, so each device shows a one-time "not secure" prompt — tap <strong>Advanced → Proceed</strong> and you're set. Prefer a trusted certificate with no warning at all? Use Tailscale's built-in HTTPS instead:
           <pre><code>tailscale cert        # one-time, enables HTTPS for your tailnet
-tailscale serve https / http://localhost:8000</code></pre>
+tailscale serve https / http://localhost:8443</code></pre>
           Then open <code>https://your-machine.your-tailnet.ts.net</code>. See <a href="https://tailscale.com/kb/1153/enabling-https" target="_blank" rel="noopener">Tailscale HTTPS docs</a>.
         </div>
 
@@ -204,13 +202,14 @@ tailscale serve https / http://localhost:8000</code></pre>
           <li><strong>Rename</strong> a camera by clicking its name.</li>
           <li><strong>Record</strong> saves video to your Downloads folder. Recordings auto-split every 2 hours.</li>
           <li><strong>Motion-only recording</strong> records solely while motion is detected.</li>
+          <li><strong>📡 Home Hub</strong> (needs <code>python serve.py</code>) shares this computer's cameras so your phone can watch <em>and control</em> them from anywhere — see the <strong>Remote Access</strong> tab.</li>
         </ul>
 
         <h3>What Vigilo does <em>not</em> do</h3>
         <ul class="no-list">
-          <li>No cloud storage or streaming through anyone's servers.</li>
+          <li>No cloud — no footage, accounts, or settings on anyone else's servers.</li>
           <li>No accounts, no email, no telemetry, no analytics.</li>
-          <li>No external requests — it works fully offline.</li>
+          <li>No third-party requests. Remote access uses a small relay that runs only on <em>your</em> computer; video stays peer-to-peer.</li>
           <li>Your password and settings live in this browser's localStorage only.</li>
         </ul>
 
@@ -242,6 +241,38 @@ tailscale serve https / http://localhost:8000</code></pre>
         <input class="cam-name" value="Camera" spellcheck="false" />
         <div class="cam-actions">
           <button class="icon-btn cam-toggle" title="Turn camera on/off">⏻</button>
+          <button class="icon-btn cam-record" title="Start/stop recording">⏺</button>
+          <button class="icon-btn cam-fs" title="Fullscreen">⛶</button>
+        </div>
+      </div>
+      <div class="cam-controls">
+        <label class="sens-row">
+          <span>Motion sensitivity</span>
+          <input type="range" class="cam-sens" min="1" max="100" value="40" />
+        </label>
+      </div>
+    </article>
+  </template>
+
+  <!-- Hidden template for a REMOTE camera tile (shown on the phone/viewer) -->
+  <template id="remote-tile-template">
+    <article class="cam-tile" data-state="on">
+      <div class="cam-video-wrap">
+        <video class="cam-video" autoplay playsinline muted></video>
+        <div class="cam-overlay">
+          <span class="cam-badge motion-badge" hidden>● MOTION</span>
+          <span class="cam-badge rec-badge" hidden><span class="dot"></span> REC</span>
+        </div>
+      </div>
+      <div class="cam-bar">
+        <input class="cam-name" value="Camera" spellcheck="false" />
+        <div class="cam-actions">
+          <button class="icon-btn cam-toggle" title="Turn camera on/off (on the hub)">⏻</button>
+          <select class="rec-target" title="Where to save the recording">
+            <option value="host">Save: Home</option>
+            <option value="phone">Save: Phone</option>
+            <option value="both">Save: Both</option>
+          </select>
           <button class="icon-btn cam-record" title="Start/stop recording">⏺</button>
           <button class="icon-btn cam-fs" title="Fullscreen">⛶</button>
         </div>

@@ -187,6 +187,33 @@ export class Camera {
     this._applyRecording();
   }
 
+  /* ---------- Remote control (commands relayed from a Viewer) ---------- */
+  setManualRecording(on) {
+    if (on && (!this.running || !Recorder.supported())) return;
+    this.manualRecording = !!on;
+    this._applyRecording();
+  }
+
+  setSensitivity(v) {
+    v = Math.max(1, Math.min(100, Number(v) || this.sensitivity));
+    this.sensitivity = v;
+    this.sensInput.value = v;
+    store.setCamera(this.deviceId, { sensitivity: v });
+  }
+
+  setName(name) {
+    this.name = (name || '').trim() || this.name;
+    this.nameInput.value = this.name;
+    store.setCamera(this.deviceId, { name: this.name });
+  }
+
+  async setEnabled(on) {
+    this.enabled = !!on;
+    store.setCamera(this.deviceId, { enabled: this.enabled });
+    if (on && !this.running) { try { await this.start(); } catch {} }
+    else if (!on && this.running) this.stop();
+  }
+
   _updateMotionRecording(now) {
     if (!this.hooks.getMotionOnlyRecording?.() || !this.running) {
       if (this.motionRecording) { this.motionRecording = false; this._applyRecording(); }
