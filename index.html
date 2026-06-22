@@ -121,8 +121,8 @@
     <!-- ============ REMOTE ACCESS TAB ============ -->
     <section class="view" id="view-remote">
       <div class="doc">
-        <h2>Watch &amp; control from your phone</h2>
-        <p>One device — the computer with the webcams — becomes your <strong>Home Hub</strong>. Any other device (your phone, a laptop) connects to it automatically and gives you the <em>full dashboard</em>: live video, motion alerts, recording, and every setting — from anywhere. No codes to copy. Connect once, it just works.</p>
+        <h2>Watch and control your cameras from your phone</h2>
+        <p>One computer — the one with the webcams — becomes the Home Hub. Any other device, like your phone or a laptop, connects to it and gives you the full dashboard: live video, motion alerts, recording, and every setting. There are no codes to copy. You connect once and it works.</p>
 
         <!-- Live status panel (filled in by app.js) -->
         <div class="stream-card" id="remote-panel">
@@ -135,56 +135,56 @@
         </div>
 
         <div class="callout">
-          <strong>The 2-minute setup:</strong>
+          <strong>The short version:</strong>
           <ol style="margin:8px 0 0 20px">
-            <li>On the <strong>computer with cameras</strong>: run <code>python serve.py</code>, open the address it prints, enable your cameras, then flip on <strong>📡 Home Hub</strong> on the Dashboard.</li>
-            <li>On your <strong>phone</strong>: open the same address (over Tailscale when away). Vigilo detects the hub and connects automatically — you'll land right on the live cameras.</li>
+            <li>On the computer with the cameras: run <code>python serve.py</code>, open the address it prints, click "Enable Cameras," then turn on the "Home Hub" switch in the toolbar.</li>
+            <li>On your phone: open the same address (use Tailscale if you are away from home). Vigilo finds the hub and connects on its own, and you land right on the live cameras.</li>
           </ol>
-          For this to work, the computer must be started with <code>python serve.py</code> (the plain <code>python -m http.server</code> doesn't include the connection helper).
+          One thing to know: you must start the computer with <code>python serve.py</code>. The plain <code>python -m http.server</code> command does not include the helper that makes the phone connection work.
         </div>
 
-        <h2 style="margin-top:32px">Reaching your phone from anywhere (Tailscale)</h2>
-        <p>Vigilo has no cloud — by design. To connect when you are away from home, both devices join your own private, encrypted network with <strong>Tailscale</strong>. It is free for personal use and takes about 5 minutes.</p>
+        <h2 style="margin-top:32px">Connecting when you are away from home (Tailscale)</h2>
+        <p>If your phone and computer are on the same Wi-Fi, you do not need anything else. To connect from somewhere else, both devices join your own private network using Tailscale. It is free for personal use and takes about five minutes to set up.</p>
 
         <div class="callout">
-          <strong>How it works:</strong> Tailscale connects your phone and the computer running Vigilo over an encrypted tunnel, as if they were on the same Wi-Fi — even across the internet. Your video never touches anyone else's servers.
+          <strong>What Tailscale does:</strong> it links your phone and your home computer over an encrypted connection, as if they were on the same Wi-Fi, even across the internet. Your video still never touches anyone else's servers.
         </div>
 
-        <h3>Step 1 — Install Tailscale on the host computer</h3>
-        <p>This is the computer running <code>python serve.py</code> with your cameras plugged in (your Home Hub).</p>
+        <h3>Step 1 — Install Tailscale on the home computer</h3>
+        <p>This is the computer running <code>python serve.py</code> with your cameras plugged in.</p>
         <ol>
           <li>Go to <a href="https://tailscale.com/download" target="_blank" rel="noopener">tailscale.com/download</a> and install it.</li>
-          <li>Sign in (Google, Microsoft, GitHub, or email — this only authenticates your devices).</li>
-          <li>After it connects, note the device's Tailscale IP — it looks like <code>100.x.x.x</code>. You can see it in the Tailscale app or by running <code>tailscale ip -4</code>.</li>
+          <li>Sign in. You can use Google, Microsoft, GitHub, or email; this only confirms which devices are yours.</li>
+          <li>Once it connects, find this computer's Tailscale address. It looks like <code>100.x.x.x</code>. You can see it in the Tailscale app, or by running <code>tailscale ip -4</code>.</li>
         </ol>
 
-        <h3>Step 2 — Install Tailscale on your phone / laptop</h3>
+        <h3>Step 2 — Install Tailscale on your phone or laptop</h3>
         <ol>
           <li>Install the Tailscale app on the device you want to watch from
-            (<a href="https://apps.apple.com/app/tailscale/id1470499037" target="_blank" rel="noopener">iOS</a> ·
+            (<a href="https://apps.apple.com/app/tailscale/id1470499037" target="_blank" rel="noopener">iPhone</a> or
              <a href="https://play.google.com/store/apps/details?id=com.tailscale.ipn" target="_blank" rel="noopener">Android</a>).</li>
           <li>Sign in with the <strong>same account</strong> you used in Step 1.</li>
         </ol>
 
-        <h3>Step 3 — Start Vigilo with HTTPS</h3>
-        <p>On the host computer, run the launcher (it serves over HTTPS so cameras work on remote devices):</p>
+        <h3>Step 3 — Start Vigilo on the home computer</h3>
+        <p>Run the launcher. It serves Vigilo over HTTPS, which is what lets the camera work on other devices:</p>
         <pre><code>python serve.py</code></pre>
-        <p>It prints the address to open. Use <code>python3 serve.py</code> if <code>python</code> isn't found.</p>
+        <p>It prints the address to open. Use <code>python3 serve.py</code> if <code>python</code> does not work.</p>
 
-        <h3>Step 4 — Open it from your phone</h3>
-        <p>In your phone's browser, with Tailscale switched on, go to:</p>
+        <h3>Step 4 — Open it on your phone</h3>
+        <p>In your phone's browser, with Tailscale turned on, go to:</p>
         <pre><code>https://<span class="hl">100.x.x.x</span>:8443</code></pre>
-        <p>Replace <code>100.x.x.x</code> with the host's Tailscale IP from Step 1. The first visit shows a one-time "not secure" warning (self-signed certificate) — tap <strong>Advanced → Proceed</strong>. Bookmark it. That's it — encrypted access to your cameras from anywhere.</p>
+        <p>Replace <code>100.x.x.x</code> with the home computer's Tailscale address from Step 1. The first visit shows a one-time "not secure" warning, because the certificate is one Vigilo made itself. It is safe here because you are only connecting to your own computer. Tap "Advanced," then "Proceed." Bookmark the page so you do not have to type it again.</p>
 
         <div class="callout">
-          <strong>About that certificate warning:</strong> <code>serve.py</code> uses a self-signed certificate, so each device shows a one-time "not secure" prompt — tap <strong>Advanced → Proceed</strong> and you're set. Prefer a trusted certificate with no warning at all? Use Tailscale's built-in HTTPS instead:
-          <pre><code>tailscale cert        # one-time, enables HTTPS for your tailnet
+          <strong>About that warning:</strong> <code>serve.py</code> uses a certificate it made itself, so each device shows the "not secure" prompt once. Tap "Advanced," then "Proceed," and you are set. If you would rather not see the warning at all, Tailscale can give you a trusted certificate for free:
+          <pre><code>tailscale cert
 tailscale serve https / http://localhost:8443</code></pre>
-          Then open <code>https://your-machine.your-tailnet.ts.net</code>. See <a href="https://tailscale.com/kb/1153/enabling-https" target="_blank" rel="noopener">Tailscale HTTPS docs</a>.
+          Then open <code>https://your-machine.your-tailnet.ts.net</code>. Details are in the <a href="https://tailscale.com/kb/1153/enabling-https" target="_blank" rel="noopener">Tailscale HTTPS guide</a>.
         </div>
 
-        <h3>Same Wi-Fi only? Even simpler</h3>
-        <p>If the viewing device is on the <strong>same Wi-Fi</strong> as the host, you don't need Tailscale at all. Just run <code>python serve.py</code> on the host and open the <em>"On your phone"</em> address it prints (e.g. <code>https://192.168.1.50:8443</code>) on your phone.</p>
+        <h3>On the same Wi-Fi? It is even simpler</h3>
+        <p>If the phone is on the <strong>same Wi-Fi</strong> as the computer, you do not need Tailscale at all. Just run <code>python serve.py</code> on the computer and open the "On your phone" address it prints (for example <code>https://192.168.1.50:8443</code>) on your phone.</p>
       </div>
     </section>
 
@@ -192,29 +192,29 @@ tailscale serve https / http://localhost:8443</code></pre>
     <section class="view" id="view-about">
       <div class="doc">
         <h2>About Vigilo</h2>
-        <p>Vigilo turns the webcams you already own into a private security system. It runs entirely in your browser. There is no backend, no sign-up, and nothing leaves your device.</p>
+        <p>Vigilo turns the webcams you already own into a home security system. It runs entirely in your browser. There is no backend, no sign-up, and nothing leaves your device.</p>
 
-        <h3>Quick tips</h3>
+        <h3>How to use it</h3>
         <ul>
-          <li><strong>Enable Cameras</strong> grants access and shows every detected webcam.</li>
-          <li>Each tile has its own <strong>motion sensitivity</strong> slider and on/off toggle.</li>
-          <li>Double-click (or use ⛶) on a tile to go <strong>fullscreen</strong>.</li>
-          <li><strong>Rename</strong> a camera by clicking its name.</li>
-          <li><strong>Record</strong> saves video to your Downloads folder. Recordings auto-split every 2 hours.</li>
-          <li><strong>Motion-only recording</strong> records solely while motion is detected.</li>
-          <li><strong>📡 Home Hub</strong> (needs <code>python serve.py</code>) shares this computer's cameras so your phone can watch <em>and control</em> them from anywhere — see the <strong>Remote Access</strong> tab.</li>
+          <li><strong>Enable Cameras</strong> asks for camera permission and shows every webcam it finds.</li>
+          <li>Each camera has its own <strong>motion sensitivity</strong> slider and an on/off button.</li>
+          <li>To make a camera <strong>fullscreen</strong>, double-click it or use the ⛶ button.</li>
+          <li>To <strong>rename</strong> a camera, click its name and type a new one.</li>
+          <li><strong>Record</strong> saves video to your Downloads folder. Long recordings are split into a new file every 2 hours.</li>
+          <li><strong>Motion-only recording</strong> records only while something is moving.</li>
+          <li><strong>Home Hub</strong> (needs <code>python serve.py</code>) shares this computer's cameras so your phone can watch and control them from anywhere. See the Remote Access tab.</li>
         </ul>
 
-        <h3>What Vigilo does <em>not</em> do</h3>
+        <h3>What Vigilo does not do</h3>
         <ul class="no-list">
-          <li>No cloud — no footage, accounts, or settings on anyone else's servers.</li>
-          <li>No accounts, no email, no telemetry, no analytics.</li>
-          <li>No third-party requests. Remote access uses a small relay that runs only on <em>your</em> computer; video stays peer-to-peer.</li>
-          <li>Your password and settings live in this browser's localStorage only.</li>
+          <li>No cloud. Your footage, accounts, and settings never go to anyone else's servers.</li>
+          <li>No accounts, no email, no tracking, no analytics.</li>
+          <li>No third-party requests. Remote access uses a small helper that runs only on your own computer, and the video goes straight between your devices.</li>
+          <li>Your password and settings stay in this browser only.</li>
         </ul>
 
         <div class="callout">
-          Vigilo is free and open source under the MIT license. Tinker with it, audit it, make it yours.
+          Vigilo is free and open source under the MIT license. Read it, change it, and make it your own.
         </div>
       </div>
     </section>
