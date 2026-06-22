@@ -8,12 +8,15 @@ import { store } from './store.js';
 import { Camera } from './camera.js';
 import { Recorder } from './recorder.js';
 import { notifications, toast } from './notify.js';
+import { HostSession, ViewerSession } from './webrtc.js';
 
 const $ = sel => document.querySelector(sel);
 
 const state = {
   cameras: [],   // Camera[]
   started: false,
+  host: null,    // HostSession
+  viewer: null,  // ViewerSession
 };
 
 /* ============================================================
@@ -72,12 +75,14 @@ function initApp() {
   initTabs();
   initToolbar();
   initClock();
+  initStreaming();
   restoreToggles();
   $('#lock-btn').addEventListener('click', lockNow);
 }
 
 function lockNow() {
-  // Privacy: stop all cameras and return to lock screen.
+  // Privacy: stop all cameras, tear down streaming, return to lock screen.
+  closeStreaming();
   state.cameras.forEach(c => c.destroy());
   state.cameras = [];
   state.started = false;
@@ -261,6 +266,134 @@ window.addEventListener('beforeunload', e => {
     e.returnValue = '';
   }
 });
+
+/* ============================================================
+   PEER-TO-PEER STREAMING (Host / Viewer)
+   ============================================================ */
+function setStatus(el, msg, kind = '') {
+  el.textContent = msg;
+  el.className = 'stream-status' + (kind ? ' ' + kind : '');
+}
+
+function copyFrom(textarea, btn) {
+  textarea.select();
+  navigator.clipboard?.writeText(textarea.value).catch(() => {});
+  try { document.execCommand('copy'); } catch {}
+  const orig = btn.textContent;
+  btn.textContent = 'Copied ✓';
+  setTimeout(() => { btn.textContent = orig; }, 1500);
+}
+
+function activeStreamSources() {
+  return state.cameras
+    .filter(c => c.running && c.stream)
+    .map(c => ({ name: c.name, stream: c.stream }));
+}
+
+function initStreaming() {
+  /* ---- HOST ---- */
+  const hostStart = $('#host-start');
+  hostStart.addEventListener('click', async () => {
+    const sources = activeStreamSources();
+    if (sources.length === 0) {
+      toast('No cameras to share', 'Enable cameras on the Dashboard first.', 'warn');
+      return;
+    }
+    if (state.host) state.host.close();
+    state.host = new HostSession(sources, s => {
+      const st = $('#host-status');
+      if (s === 'connected') setStatus(st, '✓ Viewer connected — streaming live.', 'ok');
+      else if (s === 'failed' || s === 'disconnected') setStatus(st, 'Connection lost. Create a new invite code to reconnect.', 'err');
+      else setStatus(st, 'Status: ' + s);
+    });
+    hostStart.disabled = true;
+    hostStart.textContent = 'Generating…';
+    try {
+      const code = await state.host.createInvite();
+      $('#host-offer').value = code;
+      $('#host-flow').hidden = false;
+      setStatus($('#host-status'), 'Waiting for the Viewer’s reply code…');
+    } catch (e) {
+      toast('Could not create invite', String(e), 'danger');
+    }
+    hostStart.disabled = false;
+    hostStart.textContent = 'Create new invite code';
+  });
+
+  $('#host-offer-copy').addEventListener('click', () => copyFrom($('#host-offer'), $('#host-offer-copy')));
+  $('#host-connect').addEventListener('click', async () => {
+    const code = $('#host-answer').value.trim();
+    if (!code || !state.host) return;
+    try {
+      await state.host.acceptReply(code);
+      setStatus($('#host-status'), 'Connecting…');
+    } catch (e) {
+      setStatus($('#host-status'), 'That reply code was not valid. Copy it again from the Viewer.', 'err');
+    }
+  });
+
+  /* ---- VIEWER ---- */
+  const remoteTiles = {}; // mid -> { tile, video, nameEl }
+  let pendingNames = {};
+
+  function ensureTile(mid) {
+    if (remoteTiles[mid]) return remoteTiles[mid];
+    const tile = document.createElement('div');
+    tile.className = 'remote-tile';
+    const video = document.createElement('video');
+    video.autoplay = true; video.playsInline = true; video.muted = true;
+    const nameEl = document.createElement('div');
+    nameEl.className = 'remote-name';
+    nameEl.textContent = pendingNames[mid] || `Remote camera ${Object.keys(remoteTiles).length + 1}`;
+    tile.append(video, nameEl);
+    $('#remote-grid').appendChild(tile);
+    remoteTiles[mid] = { tile, video, nameEl };
+    return remoteTiles[mid];
+  }
+
+  $('#viewer-generate').addEventListener('click', async () => {
+    const offer = $('#viewer-offer').value.trim();
+    if (!offer) { toast('Paste the invite code first', '', 'warn'); return; }
+    if (state.viewer) state.viewer.close();
+    Object.keys(remoteTiles).forEach(k => { remoteTiles[k].tile.remove(); delete remoteTiles[k]; });
+    pendingNames = {};
+
+    state.viewer = new ViewerSession(
+      ({ mid, track }) => {
+        const t = ensureTile(mid ?? track.id);
+        t.video.srcObject = new MediaStream([track]);
+      },
+      names => {
+        pendingNames = names;
+        for (const [mid, name] of Object.entries(names)) {
+          if (remoteTiles[mid]) remoteTiles[mid].nameEl.textContent = name;
+        }
+      },
+      s => {
+        const st = $('#viewer-status');
+        if (s === 'connected') setStatus(st, '✓ Connected — live video below.', 'ok');
+        else if (s === 'failed' || s === 'disconnected') setStatus(st, 'Connection lost.', 'err');
+        else setStatus(st, 'Status: ' + s);
+      }
+    );
+
+    try {
+      const reply = await state.viewer.answer(offer);
+      $('#viewer-answer').value = reply;
+      $('#viewer-flow').hidden = false;
+      setStatus($('#viewer-status'), 'Now copy this reply code back to the Host.');
+    } catch (e) {
+      toast('Invalid invite code', 'Copy the full code from the Host and try again.', 'danger');
+    }
+  });
+
+  $('#viewer-answer-copy').addEventListener('click', () => copyFrom($('#viewer-answer'), $('#viewer-answer-copy')));
+}
+
+function closeStreaming() {
+  if (state.host) { state.host.close(); state.host = null; }
+  if (state.viewer) { state.viewer.close(); state.viewer = null; }
+}
 
 /* ============================================================
    GO

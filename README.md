@@ -90,7 +90,27 @@ Want to watch from your phone while the cameras run on a laptop? If both are on 
 
 ---
 
-## Remote viewing from anywhere (Tailscale)
+## Remote viewing from anywhere
+
+Vigilo can stream the **host computer's cameras** straight to a phone or laptop using **WebRTC peer-to-peer** — the video travels directly between your two devices and never touches any server. There are two pieces:
+
+1. **Pairing** (built into the **Remote Access** tab) connects the two devices.
+2. **Tailscale** (optional) lets them find each other across the internet.
+
+### Pairing — Host & Viewer
+
+The device **with the cameras** is the **Host**; the device you **watch from** is the **Viewer**.
+
+1. On the **Host** (the computer with webcams): enable your cameras on the Dashboard, open **Remote Access → Host**, click **Create invite code**, and copy it.
+2. Send that code to your other device (paste into a note, message, etc.).
+3. On the **Viewer** (phone/laptop): open Vigilo → **Remote Access → Viewer**, paste the invite code, click **Generate reply code**, and copy the reply.
+4. Paste the reply code back on the **Host** and click **Connect**.
+
+The Host's live camera feeds now appear on the Viewer. This works on the same Wi-Fi out of the box; for internet access, do the pairing while both devices are on Tailscale (below).
+
+> The pairing code is a one-time handshake (an encrypted WebRTC offer/answer). It carries no video — it just lets the two devices open a direct, encrypted connection. No code or video is ever sent to a third party.
+
+### Tailscale — connect across the internet
 
 To reach your cameras when you're away from home — without any cloud — Vigilo recommends **Tailscale**, a free, encrypted private network. The app has a built-in **Remote Access** tab with these steps, summarized here:
 
@@ -132,6 +152,7 @@ VigiloSecure/
 ├── camera.js       # Camera class (stream + tile + motion + recording)
 ├── motion.js       # Canvas frame-difference motion detection
 ├── recorder.js     # MediaRecorder wrapper with 2-hour rolling clips
+├── webrtc.js       # Peer-to-peer camera streaming (Host/Viewer)
 ├── notify.js       # Browser notifications + in-app toasts
 ├── auth.js         # Serverless salted-hash password gate
 ├── store.js        # localStorage settings persistence

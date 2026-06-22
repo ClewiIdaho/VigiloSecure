@@ -96,8 +96,47 @@
     <!-- ============ REMOTE ACCESS TAB ============ -->
     <section class="view" id="view-remote">
       <div class="doc">
-        <h2>Watch your cameras from anywhere</h2>
-        <p>Vigilo has no cloud — by design. To reach your cameras when you are away from home, you create your own private, encrypted network with <strong>Tailscale</strong>. It is free for personal use and takes about 5 minutes.</p>
+        <h2>Watch your cameras on another device</h2>
+        <p>Vigilo can stream the cameras from <strong>this computer</strong> directly to a phone or laptop — peer to peer, end to end, with nothing going through any server. You connect the two devices once with a pairing code.</p>
+
+        <div class="callout">
+          <strong>How pairing works:</strong> the device <em>with the cameras</em> is the <strong>Host</strong>. The device you want to <em>watch from</em> is the <strong>Viewer</strong>. The Host makes an invite code, the Viewer replies with a code, you paste it back — done. For watching across the internet, do this while both devices are on <strong>Tailscale</strong> (setup steps further down).
+        </div>
+
+        <!-- ---- Streaming: HOST ---- -->
+        <div class="stream-card">
+          <h3>📡 Host — share this computer's cameras</h3>
+          <p>Do this on the computer that has the webcams. <strong>Enable your cameras on the Dashboard first.</strong></p>
+          <button class="btn btn-primary" id="host-start">Create invite code</button>
+          <div id="host-flow" hidden>
+            <label class="code-label">1. Copy this invite code and send it to your other device:</label>
+            <textarea class="code-box" id="host-offer" readonly rows="3"></textarea>
+            <button class="btn" id="host-offer-copy">Copy invite code</button>
+            <label class="code-label">2. Paste the reply code from your Viewer here:</label>
+            <textarea class="code-box" id="host-answer" rows="3" placeholder="Paste the Viewer's reply code…"></textarea>
+            <button class="btn btn-primary" id="host-connect">Connect</button>
+            <p class="stream-status" id="host-status"></p>
+          </div>
+        </div>
+
+        <!-- ---- Streaming: VIEWER ---- -->
+        <div class="stream-card">
+          <h3>📱 Viewer — watch from this device</h3>
+          <p>Do this on the phone or laptop you want to watch from.</p>
+          <label class="code-label">1. Paste the invite code from the Host:</label>
+          <textarea class="code-box" id="viewer-offer" rows="3" placeholder="Paste the Host's invite code…"></textarea>
+          <button class="btn btn-primary" id="viewer-generate">Generate reply code</button>
+          <div id="viewer-flow" hidden>
+            <label class="code-label">2. Copy this reply code and paste it back on the Host:</label>
+            <textarea class="code-box" id="viewer-answer" readonly rows="3"></textarea>
+            <button class="btn" id="viewer-answer-copy">Copy reply code</button>
+            <p class="stream-status" id="viewer-status"></p>
+          </div>
+          <div id="remote-grid" class="camera-grid stream-grid"></div>
+        </div>
+
+        <h2 style="margin-top:32px">Reaching the devices over the internet (Tailscale)</h2>
+        <p>Vigilo has no cloud — by design. To pair when you are away from home, both devices join your own private, encrypted network with <strong>Tailscale</strong>. It is free for personal use and takes about 5 minutes.</p>
 
         <div class="callout">
           <strong>How it works:</strong> Tailscale connects your phone and the computer running Vigilo over an encrypted tunnel, as if they were on the same Wi-Fi — even across the internet. Your video never touches anyone else's servers.
@@ -128,11 +167,11 @@
         <pre><code>http://<span class="hl">100.x.x.x</span>:8000</code></pre>
         <p>Replace <code>100.x.x.x</code> with the host's Tailscale IP from Step 1. Bookmark it. That's it — encrypted access to your cameras from anywhere.</p>
 
-        <div class="callout warn">
-          <strong>Camera access needs a secure context.</strong> Browsers only allow camera use on <code>https://</code> or on <code>localhost</code>. Over a plain Tailscale IP you can <em>view the dashboard</em>, but to grant <em>new</em> camera permissions on a remote device you'll want HTTPS. The easiest path is Tailscale's built-in HTTPS:
-          <pre><code>tailscale cert        # one-time, enables HTTPS for your tailnet
-tailscale serve https / http://localhost:8000</code></pre>
-          Then open <code>https://your-machine.your-tailnet.ts.net</code>. See <a href="https://tailscale.com/kb/1153/enabling-https" target="_blank" rel="noopener">Tailscale HTTPS docs</a>.
+        <div class="callout">
+          <strong>Good news for streaming:</strong> the Host runs on its own <code>localhost</code>, so its cameras work normally. The Viewer only <em>receives</em> video, so plain <code>http://100.x.x.x:8000</code> is usually enough — no HTTPS needed just to watch. If your browser ever blocks it, enable Tailscale's free HTTPS (one-time):
+          <pre><code>tailscale cert
+tailscale serve --bg 8000</code></pre>
+          Then open <code>https://your-machine.your-tailnet.ts.net</code> instead. See <a href="https://tailscale.com/kb/1153/enabling-https" target="_blank" rel="noopener">Tailscale HTTPS docs</a>.
         </div>
 
         <h3>Same Wi-Fi only? Even simpler</h3>
