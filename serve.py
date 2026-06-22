@@ -291,26 +291,27 @@ def run(host, port, use_https, ip):
         httpd.socket = ctx.wrap_socket(httpd.socket, server_side=True)
         scheme = "https"
 
-    bar = "─" * 52
+    bar = "-" * 52
     print()
-    print(c("  🛡️  Vigilo is running", "1;32"))
+    print(c("  Vigilo is running.", "1;32"))
     print(c("  " + bar, "90"))
     print(f"  On this computer : {c(f'{scheme}://localhost:{port}', '36')}")
     if host in ("0.0.0.0", "::"):
         print(f"  On your phone    : {c(f'{scheme}://{ip}:{port}', '36')}")
-        print(c("                     (same Wi-Fi, or your Tailscale IP)", "90"))
+        print(c("                     (same Wi-Fi, or your Tailscale address)", "90"))
     print(c("  " + bar, "90"))
     if use_https:
-        print(c("  First visit on each device shows a 'not secure' warning —", "33"))
-        print(c("  that's expected for a self-signed cert. Tap Advanced →", "33"))
-        print(c("  Proceed/Continue. Cameras then work because it's HTTPS.", "33"))
+        print(c("  The first time you open this on a device, the browser", "33"))
+        print(c("  shows a 'not secure' warning. That is expected, because", "33"))
+        print(c("  the certificate is one Vigilo made itself. It is safe", "33"))
+        print(c("  here. Tap Advanced, then Proceed. The camera then works.", "33"))
     else:
-        print(c("  Plain HTTP: cameras work on THIS computer only.", "33"))
-        print(c("  For phone/remote camera access, run without --http.", "33"))
+        print(c("  Plain HTTP: the camera works on THIS computer only.", "33"))
+        print(c("  To use cameras on a phone, run without --http.", "33"))
     print(c("  " + bar, "90"))
-    print(c("  📡 Remote control is ON. On this computer, open the", "32"))
-    print(c("     Dashboard and switch on 'Home Hub'. Then open the same", "32"))
-    print(c("     address on your phone to watch & control from anywhere.", "32"))
+    print(c("  Remote control is on. On this computer, open the dashboard", "32"))
+    print(c("  and turn on the 'Home Hub' switch. Then open the same", "32"))
+    print(c("  address on your phone to watch and control from anywhere.", "32"))
     print(c("  " + bar, "90"))
     print(c("  Press Ctrl+C to stop.", "90"))
     print()
@@ -318,7 +319,7 @@ def run(host, port, use_https, ip):
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
-        print("\n" + c("Vigilo stopped. Your data never left this machine. 👋", "90"))
+        print("\n" + c("Vigilo stopped. Your data never left this machine.", "90"))
         httpd.server_close()
 
 

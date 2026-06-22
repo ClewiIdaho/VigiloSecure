@@ -1,225 +1,200 @@
-# 🛡️ Vigilo — Private Home Security
+# Vigilo — Private Home Security
 
-**Turn the webcams you already own into a private security system that runs entirely on your own device.**
+Turn the webcams you already own into a home security system that runs entirely on your own computer. Your video never leaves your machine.
 
-Vigilo is a free, open-source, privacy-first home security app. It is a plain folder of HTML/CSS/JavaScript — no backend, no cloud, no accounts, no installs. You run it with one command and open it in your browser. **Your video never leaves your computer.**
-
----
-
-## Why Vigilo exists
-
-Most "smart" security cameras send your footage to a company's servers, lock features behind a subscription, and ask you to trust them with the inside of your home. Vigilo is the opposite:
-
-- 🆓 **Free forever** — no subscriptions, no paywalls.
-- 🔒 **Private by design** — feeds, recordings, and your password stay on your device.
-- 🌐 **No cloud** — there is literally no server to send your data to.
-- 🧩 **Open source** — read every line, audit it, change it (MIT licensed).
-- ⚡ **No install** — pure browser tech, works offline.
-
-If you have a laptop with a built-in webcam, or a few USB webcams, you already have everything you need.
+Vigilo is a plain folder of HTML, CSS, and JavaScript. There is no backend, no cloud, no account to create, and nothing to install. You start it with one command and open it in your web browser.
 
 ---
 
-## Features
+## What you need
 
-- **Multi-camera dashboard** — auto-detects every connected webcam (USB or built-in) and shows them in a responsive grid that adapts from 1 to 6+ cameras.
-- **Motion detection** — per-camera detection with a sensitivity slider, an on-screen indicator, and optional browser notifications.
-- **Recording** — save clips to your Downloads folder with the MediaRecorder API. Continuous recordings auto-split every 2 hours, plus an optional **motion-only** mode that records solely when something moves.
-- **Per-camera controls** — nickname each camera, toggle it on/off, and click to go fullscreen.
-- **Clean dark UI** — modern security-app look, fully mobile responsive.
-- **Password lock** — a simple password gate stored only in your browser (no server, no account).
-- **Remote access (Home Hub)** — turn the camera computer into a hub; watch **and fully control** it from your phone (record, sensitivity, on/off, rename) with auto-connect — no codes. Private peer-to-peer over your own Tailscale network, no cloud.
+Two things, and you probably already have both:
 
----
+1. A web browser. Chrome or Firefox work best.
+2. Python. Most computers already have it.
 
-## Requirements
+To check if you have Python, open a terminal (see Step 2 below for how) and type:
 
-You only need two things:
+```
+python --version
+```
 
-1. **A modern web browser** — Chrome or Firefox recommended.
-2. **Python** — almost certainly already installed. Check with:
-   ```bash
-   python --version
-   ```
-   If that fails, try `python3 --version`. No Python? Get it free at [python.org](https://www.python.org/downloads/).
+If that prints a version number, you are good. If it says "command not found," try `python3 --version`. If neither works, download Python for free from https://www.python.org/downloads/ and install it.
 
-That's it. No Node, no npm, no build step, no dependencies to download.
+That is the whole list. No Node, no npm, no build step.
 
 ---
 
-## Setup — step by step
+## Quick start (on one computer)
 
-**1. Get the files.** Download this folder (or `git clone` it) to your computer.
+This runs Vigilo on the same computer the cameras are plugged into.
 
-**2. Open a terminal in the Vigilo folder.**
-   - **Windows:** open the folder in File Explorer, click the address bar, type `cmd`, press Enter.
-   - **macOS:** right-click the folder → *New Terminal at Folder*.
-   - **Linux:** open your terminal and `cd` into the folder.
+**Step 1 — Get the files onto your computer.**
+Download this folder, or if you use git: `git clone` it.
 
-**3. Start the local server:**
-   ```bash
-   python -m http.server 8000
-   ```
-   (If `python` doesn't work, use `python3 -m http.server 8000`.)
+**Step 2 — Open a terminal inside the Vigilo folder.**
 
-**4. Open Vigilo in your browser:**
-   ```
-   http://localhost:8000
-   ```
+- Windows: open the folder in File Explorer, click the address bar at the top, type `cmd`, and press Enter.
+- Mac: right-click the folder and choose "New Terminal at Folder."
+- Linux: open your terminal and use `cd` to move into the folder.
 
-**5. Create a password** when prompted (stored only in your browser), then click **Enable Cameras** and allow access when the browser asks.
+**Step 3 — Start Vigilo.** Type this and press Enter:
 
-> 💡 **Why a server instead of double-clicking `index.html`?** Browsers only allow camera access on `http://localhost` or `https://` for security. Opening the file directly (`file://`) will block the cameras. The tiny Python server fixes this — it serves everything locally and uploads nothing.
+```
+python -m http.server 8000
+```
+
+(If `python` does not work, use `python3 -m http.server 8000`.)
+
+Leave that terminal window open. It is the server. Closing it stops Vigilo.
+
+**Step 4 — Open Vigilo in your browser.** Go to this address:
+
+```
+http://localhost:8000
+```
+
+**Step 5 — Set it up.** The first time, Vigilo asks you to create a password. This password is stored only in your browser; there is no account and nothing is sent anywhere. Then click "Enable Cameras" and click "Allow" when the browser asks for camera permission.
+
+That's it. Your cameras show up in a grid.
+
+> Why a server instead of just double-clicking `index.html`? Web browsers only let a page use your camera when it is served from `http://localhost` or a secure `https://` address. Opening the file directly does not count, so the camera stays blocked. The little Python server fixes that. It runs only on your computer and uploads nothing.
 
 ---
 
-## View from your phone or another device
+## Watch from your phone or another device
 
-Want to watch from your phone while the cameras run on a laptop? Use the included launcher — it serves Vigilo over **HTTPS** so the camera works on *any* device, not just the host:
+Want the cameras to run on a laptop and watch them from your phone? Use the included launcher instead of the command above. It serves Vigilo over HTTPS, which is what lets the camera work on devices other than the host.
 
-```bash
+On the computer with the cameras, run:
+
+```
 python serve.py
 ```
-(Use `python3 serve.py` if `python` isn't found.)
 
-It auto-creates a self-signed certificate, listens on every network interface, and prints two addresses:
+(Use `python3 serve.py` if `python` does not work.)
+
+The first time, it creates a security certificate for itself and then prints two addresses, like this:
 
 ```
 On this computer : https://localhost:8443
-On your phone    : https://192.168.1.50:8443   ← your host's real IP
+On your phone    : https://192.168.1.50:8443   (this is your computer's address on the network)
 ```
 
-On your phone (same Wi-Fi, or over Tailscale — see below), open the **phone** address. The first visit shows a "not secure" warning — that's expected for a self-signed certificate. Tap **Advanced → Proceed/Continue** once, and the camera will work because the page is now HTTPS.
+On your phone, open the second address (the "On your phone" one). The phone must be on the same Wi-Fi as the computer, or connected through Tailscale (explained below).
 
-> 💡 **Why HTTPS?** Browsers only allow camera access (`getUserMedia`) on `https://` or `localhost`. That's why `http://localhost:8000` works on the host but `http://<ip>:8000` fails on a phone — the phone is on a plain-HTTP origin, so the browser disables the camera. `serve.py` gives every device a secure origin. The dashboard even shows a banner explaining this if you ever land on an insecure address.
+The first time you open it, the phone shows a "not secure" or "your connection is not private" warning. This is expected, because the certificate is one Vigilo made itself rather than buying from a company. It is safe here because the connection only goes to your own computer. Tap "Advanced," then "Proceed" or "Continue." After that, the camera works because the page is now on a secure HTTPS address.
 
-**Just want plain HTTP on the host only?** The original one-liner still works for local use:
-```bash
-python -m http.server 8000 --bind 0.0.0.0
-```
-…but cameras will only grant on `localhost`/HTTPS, so phones can view the page without live camera permissions. Prefer `serve.py` for multi-device.
-
-**Finding your host's IP** (if you need it manually):
-- **Windows:** `ipconfig` → *IPv4 Address* (e.g. `192.168.1.50`)
-- **macOS/Linux:** `ipconfig getifaddr en0` or `hostname -I`
+> How do I find my computer's address by hand? You usually don't need to; `serve.py` prints it for you. But if you want it: on Windows, run `ipconfig` and look at "IPv4 Address." On Mac or Linux, run `hostname -I` (or `ipconfig getifaddr en0` on Mac).
 
 ---
 
-## Remote access from anywhere — the Home Hub
+## Control your cameras from anywhere — the Home Hub
 
-Vigilo works like a private version of a smart-home app. One device — the computer with the webcams — becomes your **Home Hub**. Any other device (your phone, a laptop) connects to it **automatically** and gets the *full dashboard*: live video, motion alerts, recording, and every setting — from anywhere. **No codes to copy. Connect once, it just works.**
+The "Home Hub" lets you watch and fully control your cameras from your phone, even when you are away from home. The phone sees live video, gets motion alerts, can record, and can change every setting — the same as sitting at the computer.
 
-### How it works
+Here is how it works in plain terms: `serve.py` runs a tiny helper on your home computer that introduces your phone to the home computer. Once they are introduced, the video and your commands travel straight between your phone and your computer. Nothing passes through anyone else's servers, and the helper never sees your video.
 
-- `serve.py` runs a tiny **local relay** on your home computer. It introduces your phone to your Home Hub and passes a one-time WebRTC handshake — then steps out of the way.
-- After that, **video and your commands flow directly phone ↔ computer** (peer-to-peer, encrypted). The relay never sees your video, and nothing touches any third-party server. The relay lives only on your machine, reachable only over your own network/Tailscale.
+### Setting up the Home Hub
 
-### Set it up (about 2 minutes)
+**On the computer with the cameras:**
 
-1. **On the computer with the cameras** (your Home Hub):
-   ```bash
-   python serve.py
-   ```
-   Open the address it prints, enable your cameras, then switch on **📡 Home Hub** in the Dashboard toolbar.
-2. **On your phone**: open the **same address** (over Tailscale when you're away — see below). Vigilo detects the hub and connects automatically. You land right on the live cameras, with full control:
-   - ▶️ **Live video** of every camera on the home computer.
-   - 🔴 **Record** — and choose where to save: **Home** (the always-on computer), **Phone**, or **Both**.
-   - 🎚️ **Motion sensitivity**, **on/off**, and **rename** — all applied on the home computer in real time.
-   - 🟢 Live **motion** and **recording** indicators.
+1. Run `python serve.py`.
+2. Open the address it prints and click "Enable Cameras."
+3. On the Dashboard, turn on the "Home Hub" switch in the toolbar.
 
-> Only one device needs to be the Home Hub. Everything else is a viewer. If the connection drops, viewers reconnect on their own.
+**On your phone:**
 
-### Tailscale — reach your hub across the internet
+1. Open the same address the computer printed (use Tailscale if you are away from home — see below).
+2. Vigilo finds the hub and connects on its own. You land right on the live cameras.
 
-To connect when you're away from home — without any cloud — use **Tailscale**, a free, encrypted private network:
+From the phone you can:
 
-1. **Install Tailscale on the home computer**: [tailscale.com/download](https://tailscale.com/download). Sign in. Note its Tailscale IP (`100.x.x.x`) via `tailscale ip -4`.
-2. **Install Tailscale on your phone** and sign in with the **same account**.
-3. **Start the hub**: `python serve.py` on the home computer, and turn on 📡 Home Hub.
-4. **On your phone** (Tailscale on), open `https://100.x.x.x:8443`, accept the one-time self-signed-certificate warning (**Advanced → Proceed**), and it connects automatically.
+- See live video from every camera on the home computer.
+- Record, and choose where the clip is saved: on the home computer, on the phone, or both.
+- Change motion sensitivity, turn cameras on or off, and rename them. The change happens on the home computer right away.
 
-Prefer a trusted certificate with no warning? Use Tailscale's free HTTPS instead:
-```bash
+Only one device is the Home Hub (the computer with the cameras). Everything else just watches. If the connection drops, the watching devices reconnect on their own.
+
+### Reaching home when you are away (Tailscale)
+
+When your phone and computer are on the same Wi-Fi, the steps above are all you need. To connect from somewhere else — without any cloud — use Tailscale. It is a free private network that links your own devices together over an encrypted connection. Setup takes about five minutes.
+
+1. Install Tailscale on the home computer from https://tailscale.com/download and sign in. After it connects, find its Tailscale address (it looks like `100.x.x.x`) by running `tailscale ip -4`.
+2. Install the Tailscale app on your phone and sign in with the **same account**.
+3. On the home computer, run `python serve.py` and turn on the Home Hub.
+4. On your phone, with Tailscale switched on, open `https://100.x.x.x:8443` (use the address from step 1). Accept the one-time "not secure" warning, and it connects.
+
+Prefer not to see the certificate warning at all? Tailscale can provide a trusted certificate for free:
+
+```
 tailscale cert
 tailscale serve https / http://localhost:8443
 ```
-Then visit `https://your-machine.your-tailnet.ts.net`. See the [Tailscale HTTPS docs](https://tailscale.com/kb/1153/enabling-https).
 
-Your video travels only directly between your own devices over your encrypted Tailscale network — it never touches anyone else's servers.
+Then open `https://your-machine.your-tailnet.ts.net`. Details are in the Tailscale HTTPS guide: https://tailscale.com/kb/1153/enabling-https
 
----
-
-## What this app does **NOT** do — by design
-
-- ❌ **No cloud.** No footage, accounts, or settings on anyone's servers. The only "server" is the small relay that runs on *your own* computer.
-- ❌ **No accounts, email, or sign-ups.** Nothing to register.
-- ❌ **No telemetry, analytics, or tracking.** No third-party requests, ever.
-- ❌ **No background/always-on recording when the tab is closed.** The Home Hub records while its dashboard is open.
-- ❌ **No AI person/face recognition.** Motion detection is simple pixel-difference comparison, done locally.
-
-The password lock is convenience-grade snooping protection stored in your browser's localStorage — it is **not** a replacement for locking your actual computer.
+Your video only ever travels directly between your own devices over Tailscale's encrypted connection. It never touches anyone else's servers.
 
 ---
 
-## Project structure
+## What Vigilo does not do, on purpose
+
+- No cloud. Your footage, settings, and password never go to anyone's servers. The only "server" is the small helper that runs on your own computer.
+- No accounts, no email, no sign-up.
+- No tracking, no analytics, no third-party requests.
+- No recording when the tab is closed. The Home Hub records only while its dashboard is open.
+- No face recognition or AI. Motion detection is a simple comparison of one video frame to the next, done on your computer.
+
+The password lock keeps a casual snooper out of the dashboard. It is stored in your browser only. It is not a replacement for locking your actual computer.
+
+---
+
+## What each file does
 
 ```
 VigiloSecure/
-├── serve.py        # HTTPS launcher + tiny local relay for remote access
-├── index.html      # App shell: lock screen, dashboard, tabs
-├── style.css       # Dark, mobile-first theme
-├── app.js          # Bootstrap & orchestration
-├── camera.js       # Camera class (stream + tile + motion + recording)
-├── motion.js       # Canvas frame-difference motion detection
-├── recorder.js     # MediaRecorder wrapper with 2-hour rolling clips
-├── remote.js       # Home Hub + auto-connecting remote viewer (WebRTC)
-├── notify.js       # Browser notifications + in-app toasts
-├── auth.js         # Serverless salted-hash password gate
-├── store.js        # localStorage settings persistence
-├── README.md
-└── LICENSE
+  serve.py        HTTPS launcher and the small helper for remote access
+  index.html      The app itself: lock screen, dashboard, tabs
+  style.css       The dark, mobile-friendly look
+  app.js          Wires everything together
+  camera.js       One camera: its video, tile, motion, and recording
+  motion.js       Detects motion by comparing video frames
+  recorder.js     Saves video clips, splitting every 2 hours
+  remote.js       Home Hub and the remote viewer (the phone connection)
+  notify.js       Browser notifications and in-app messages
+  auth.js         The password lock (stores a scrambled hash, never the password)
+  store.js        Saves your settings in the browser
+  README.md       This file
+  LICENSE         The license (MIT)
 ```
 
-Built with only **getUserMedia**, **MediaRecorder**, and **Canvas** — standard browser APIs, no frameworks.
+Vigilo is built only with standard browser features: getUserMedia, MediaRecorder, and Canvas. No frameworks.
 
 ---
 
-## Screenshots
+## Which browsers work
 
-> _Add your own screenshots here._
+| Browser       | Cameras | Recording | Notifications |
+|---------------|:-------:|:---------:|:-------------:|
+| Chrome / Edge | Yes     | Yes       | Yes           |
+| Firefox       | Yes     | Yes       | Yes           |
+| Safari        | Yes     | Partial   | Partial       |
 
-| Dashboard | Mobile | Remote Access |
-|-----------|--------|---------------|
-| _(screenshot placeholder)_ | _(screenshot placeholder)_ | _(screenshot placeholder)_ |
-
----
-
-## Browser support
-
-| Browser | Cameras | Recording | Notifications |
-|---------|:-------:|:---------:|:-------------:|
-| Chrome / Edge | ✅ | ✅ | ✅ |
-| Firefox | ✅ | ✅ | ✅ |
-| Safari | ✅ | ⚠️ partial | ⚠️ partial |
-
-Use Chrome or Firefox for the full feature set.
+Use Chrome or Firefox for everything to work.
 
 ---
 
-## Troubleshooting
+## When something goes wrong
 
-- **Works on the host, but the camera is dead on my phone.** This is the #1 gotcha: browsers block cameras on plain `http://<ip>` addresses. Run `python serve.py` on the host and open the **https://** address it prints on your phone (accept the one-time certificate warning). The dashboard shows a yellow banner whenever you're on an insecure address.
-- **Cameras won't start / "Permission denied".** Make sure you opened `http://localhost:8000` (or an `https://` address from `serve.py`), not the file directly. Allow camera access in the browser prompt (and in the site permissions if you previously blocked it).
-- **"In use by another app".** Close other apps using the webcam (Zoom, Teams, etc.), then click **Re-scan**.
-- **No cameras detected.** Plug in the webcam and click **Re-scan**. Built-in laptop cameras are detected automatically.
-- **No motion notifications.** Toggle *Notify on motion* and allow notifications when prompted. Some browsers suppress notifications on insecure origins.
+- **It works on the computer, but the camera is dead on my phone.** This is the most common problem. Browsers block cameras on plain `http://` addresses. On the computer, run `python serve.py` and open the `https://` address it prints on your phone. Accept the one-time security warning. Vigilo also shows a yellow banner whenever you are on an address that cannot use the camera.
+- **The camera will not start, or it says "Permission denied."** Make sure you opened `http://localhost:8000` (or an `https://` address from `serve.py`), not the file by double-clicking it. Click "Allow" when the browser asks. If you blocked it before, fix that in the browser's site permissions.
+- **It says "In use by another app."** Close other programs using the webcam (Zoom, Teams, FaceTime, and so on), then click "Re-scan."
+- **No cameras show up.** Plug in the webcam and click "Re-scan." Built-in laptop cameras are found automatically.
+- **No motion alerts.** Turn on "Notify on motion" and click "Allow" when the browser asks. Some browsers hide notifications on insecure addresses.
 
 ---
 
 ## License
 
-Released under the **MIT License** — free to use, modify, and share. See [LICENSE](LICENSE).
-
----
-
-_Vigilo — privacy-first, people-first home security. Watch your home, not the cloud._
+Released under the MIT License. Free to use, change, and share. See the LICENSE file.
