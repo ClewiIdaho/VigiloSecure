@@ -355,6 +355,26 @@ input[type="range"]::-moz-range-thumb {
 .callout.warn { background: rgba(255,176,32,.07); border-color: rgba(255,176,32,.3); }
 .callout pre { margin: 10px 0 2px; }
 
+/* Insecure-context banner (shown on the dashboard over http://<ip>) */
+.banner {
+  display: flex; gap: 12px; align-items: flex-start;
+  background: rgba(255,176,32,.08);
+  border: 1px solid rgba(255,176,32,.35);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px; margin-bottom: 16px;
+}
+.banner-icon { font-size: 20px; line-height: 1.25; flex-shrink: 0; }
+.banner-body {
+  display: flex; flex-direction: column; gap: 4px;
+  font-size: 13.5px; color: var(--text-dim); line-height: 1.55;
+}
+.banner-body strong { color: var(--text); }
+.banner code {
+  background: rgba(255,255,255,.06); border: 1px solid var(--border);
+  padding: 1px 6px; border-radius: 5px; font-size: 12.5px;
+  color: var(--warn); word-break: break-all;
+}
+
 /* ============================================================
    TOASTS
    ============================================================ */

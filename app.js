@@ -77,7 +77,38 @@ function initApp() {
   initClock();
   initStreaming();
   restoreToggles();
+  checkSecureContext();
   $('#lock-btn').addEventListener('click', lockNow);
+}
+
+/* ---------- Secure-context check ----------
+   Browsers only expose cameras on a secure origin (https:// or localhost).
+   Opening http://<ip> on a phone is insecure, so getUserMedia is missing.
+   Detect that up front and tell the user exactly how to fix it. */
+function cameraReady() {
+  return window.isSecureContext && !!navigator.mediaDevices?.getUserMedia;
+}
+
+function checkSecureContext() {
+  const banner = $('#insecure-banner');
+  if (!banner) return;
+  if (cameraReady()) { banner.hidden = true; return; }
+
+  const host = location.hostname || 'this-computer';
+  const httpsUrl = `https://${host}:8443`;
+  $('#insecure-banner-msg').innerHTML =
+    `Your browser only allows camera access over <code>https://</code> or ` +
+    `<code>localhost</code>. On the computer running Vigilo, start it with ` +
+    `<code>python serve.py</code>, then open the secure address it prints — ` +
+    `for this device that's about <code>${httpsUrl}</code> ` +
+    `(accept the one-time certificate warning). The <strong>Enable Cameras</strong> ` +
+    `button stays disabled until then.`;
+  banner.hidden = false;
+
+  // Block the camera button so the failure isn't a mystery.
+  const start = $('#start-btn');
+  start.disabled = true;
+  start.textContent = 'Cameras need HTTPS';
 }
 
 function lockNow() {
@@ -165,8 +196,11 @@ function updateStatus() {
    CAMERA DETECTION
    ============================================================ */
 async function startCameras() {
-  if (!navigator.mediaDevices?.getUserMedia) {
-    toast('Camera API unavailable', 'Your browser blocks camera access. Use http://localhost or HTTPS.', 'danger', 8000);
+  if (!cameraReady()) {
+    checkSecureContext();
+    toast('Cameras need a secure connection',
+      'Open Vigilo over https:// (run "python serve.py") or on localhost. See the banner above.',
+      'danger', 9000);
     return;
   }
 

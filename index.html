@@ -66,6 +66,16 @@
 
     <!-- ============ DASHBOARD TAB ============ -->
     <main class="view active" id="view-dashboard">
+      <!-- Shown only when the page is loaded over an insecure origin
+           (e.g. http://<ip> on a phone), where browsers block cameras. -->
+      <div id="insecure-banner" class="banner" hidden>
+        <span class="banner-icon">🔒</span>
+        <div class="banner-body">
+          <strong>This device can't use cameras over an insecure connection.</strong>
+          <span id="insecure-banner-msg"></span>
+        </div>
+      </div>
+
       <div class="toolbar">
         <div class="toolbar-left">
           <button class="btn btn-primary" id="start-btn">Enable Cameras</button>
@@ -158,24 +168,25 @@
           <li>Sign in with the <strong>same account</strong> you used in Step 1.</li>
         </ol>
 
-        <h3>Step 3 — Start Vigilo so it listens on the network</h3>
-        <p>On the host computer, start the server bound to all interfaces:</p>
-        <pre><code>python -m http.server 8000 --bind 0.0.0.0</code></pre>
+        <h3>Step 3 — Start Vigilo with HTTPS</h3>
+        <p>On the host computer, run the launcher (it serves over HTTPS so cameras work on remote devices):</p>
+        <pre><code>python serve.py</code></pre>
+        <p>It prints the address to open. Use <code>python3 serve.py</code> if <code>python</code> isn't found.</p>
 
         <h3>Step 4 — Open it from your phone</h3>
         <p>In your phone's browser, with Tailscale switched on, go to:</p>
-        <pre><code>http://<span class="hl">100.x.x.x</span>:8000</code></pre>
-        <p>Replace <code>100.x.x.x</code> with the host's Tailscale IP from Step 1. Bookmark it. That's it — encrypted access to your cameras from anywhere.</p>
+        <pre><code>https://<span class="hl">100.x.x.x</span>:8443</code></pre>
+        <p>Replace <code>100.x.x.x</code> with the host's Tailscale IP from Step 1. The first visit shows a one-time "not secure" warning (self-signed certificate) — tap <strong>Advanced → Proceed</strong>. Bookmark it. That's it — encrypted access to your cameras from anywhere.</p>
 
         <div class="callout">
-          <strong>Good news for streaming:</strong> the Host runs on its own <code>localhost</code>, so its cameras work normally. The Viewer only <em>receives</em> video, so plain <code>http://100.x.x.x:8000</code> is usually enough — no HTTPS needed just to watch. If your browser ever blocks it, enable Tailscale's free HTTPS (one-time):
-          <pre><code>tailscale cert
-tailscale serve --bg 8000</code></pre>
-          Then open <code>https://your-machine.your-tailnet.ts.net</code> instead. See <a href="https://tailscale.com/kb/1153/enabling-https" target="_blank" rel="noopener">Tailscale HTTPS docs</a>.
+          <strong>Two ways to watch remotely:</strong> with peer-to-peer <strong>pairing</strong> (above), the Host runs on its own <code>localhost</code> so its cameras work normally, and the Viewer only <em>receives</em> video — so plain <code>http://100.x.x.x:8000</code> is enough on the Viewer. If instead you want each device to use <em>its own</em> camera over the network, run <code>python serve.py</code> on the host for automatic HTTPS (browsers only expose cameras on <code>https://</code> or <code>localhost</code>). Prefer a certificate with no browser warning at all? Use Tailscale's built-in HTTPS:
+          <pre><code>tailscale cert        # one-time, enables HTTPS for your tailnet
+tailscale serve https / http://localhost:8000</code></pre>
+          Then open <code>https://your-machine.your-tailnet.ts.net</code>. See <a href="https://tailscale.com/kb/1153/enabling-https" target="_blank" rel="noopener">Tailscale HTTPS docs</a>.
         </div>
 
         <h3>Same Wi-Fi only? Even simpler</h3>
-        <p>If the viewing device is on the <strong>same Wi-Fi</strong> as the host, you don't need Tailscale at all. Find the host's local IP (e.g. <code>192.168.1.50</code>) and open <code>http://192.168.1.50:8000</code> on your phone.</p>
+        <p>If the viewing device is on the <strong>same Wi-Fi</strong> as the host, you don't need Tailscale at all. Just run <code>python serve.py</code> on the host and open the <em>"On your phone"</em> address it prints (e.g. <code>https://192.168.1.50:8443</code>) on your phone.</p>
       </div>
     </section>
 
