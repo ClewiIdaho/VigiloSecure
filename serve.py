@@ -34,6 +34,7 @@ device-to-device. Nothing is stored on disk and nothing leaves your machine.
 import argparse
 import functools
 import http.server
+import ipaddress
 import json
 import os
 import shutil
@@ -59,6 +60,41 @@ def c(text, code):
     if sys.stdout.isatty():
         return f"\033[{code}m{text}\033[0m"
     return text
+
+
+# Tailscale hands out addresses in the 100.64.0.0/10 CGNAT range, which
+# Python's ipaddress does NOT classify as "private". Cover it explicitly.
+_TAILSCALE_NET = ipaddress.ip_network("100.64.0.0/10")
+
+
+def _host_only(host_header):
+    """Extract the bare hostname from a `Host:`/Origin netloc (strip port)."""
+    h = (host_header or "").strip()
+    if h.startswith("["):                      # [::1]:8443  -> ::1
+        return h[1:].split("]", 1)[0].lower()
+    if h.count(":") == 1:                       # 192.168.1.5:8443 -> 192.168.1.5
+        h = h.rsplit(":", 1)[0]
+    return h.lower()
+
+
+def allowed_host(host_header):
+    """True only for addresses Vigilo is ever meant to be reached at:
+    loopback, the local LAN, link-local, Tailscale, and *.local/*.ts.net.
+
+    This is the anti-DNS-rebinding / anti-CSRF check for the relay: a request
+    arriving with a public hostname in its Host header (the hallmark of a
+    rebinding attack from a malicious website) is refused."""
+    h = _host_only(host_header)
+    if not h:
+        return False
+    if h == "localhost" or h.endswith(".local") or h.endswith(".ts.net"):
+        return True
+    try:
+        ip = ipaddress.ip_address(h)
+    except ValueError:
+        return False
+    return (ip.is_loopback or ip.is_private or ip.is_link_local
+            or ip in _TAILSCALE_NET)
 
 
 def lan_ip():
@@ -130,6 +166,8 @@ def ensure_cert(ip):
 
 CLIENT_TTL = 30          # seconds before an unseen client is dropped
 POLL_TIMEOUT = 25        # seconds a long-poll waits for a message
+MAX_CLIENTS = 64         # cap live clients so a join-flood can't exhaust RAM
+MAX_MAILBOX = 100        # cap queued messages per client (drop-oldest)
 
 _lock = threading.Lock()
 _clients = {}            # id -> {"role": str, "seen": float}
@@ -172,6 +210,28 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         except (BrokenPipeError, ConnectionResetError):
             pass
 
+    # ---- request-origin guard ----
+    def _api_allowed(self):
+        """Refuse relay requests that don't originate from the local app.
+
+        Two checks, both cheap and standard for a localhost-bound service:
+          1. Host header must be a local/LAN/Tailscale address — blocks DNS
+             rebinding, where a malicious site rebinds its domain to 127.0.0.1
+             and drives the relay from the victim's browser.
+          2. If an Origin header is present it must be same-origin — blocks a
+             random website from POSTing to the relay (e.g. claiming the Hub
+             slot) via a cross-site `fetch`.
+        The legitimate app is always same-origin, so this is transparent."""
+        host = self.headers.get("Host", "")
+        if not allowed_host(host):
+            return False
+        origin = self.headers.get("Origin")
+        if origin:
+            netloc = urlparse(origin).netloc
+            if not netloc or netloc.lower() != host.strip().lower():
+                return False
+        return True
+
     # ---- relay endpoints ----
     def _api_get(self, parsed):
         global _host_id
@@ -210,6 +270,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if parsed.path == "/api/join":
             with _lock:
                 _prune(now)
+                if len(_clients) >= MAX_CLIENTS:
+                    self._send_json({"error": "busy"}, 503)
+                    return
                 cid = uuid.uuid4().hex[:12]
                 if data.get("role") == "host":
                     _host_id = cid          # newest host takes the hub slot
@@ -233,11 +296,13 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 _prune(now)
                 target = _host_id if data.get("to") == "host" else data.get("to")
                 if target and target in _mailboxes:
-                    _mailboxes[target].append({
+                    box = _mailboxes[target]
+                    box.append({
                         "from": data.get("from"),
                         "type": data.get("type"),
                         "data": data.get("data"),
                     })
+                    del box[:-MAX_MAILBOX]   # bound the queue (drop oldest)
                     self._send_json({"ok": True})
                 else:
                     self._send_json({"ok": False, "error": "no-recipient"})
@@ -249,18 +314,27 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
         parsed = urlparse(self.path)
         if parsed.path.startswith("/api/"):
+            if not self._api_allowed():
+                return self._send_json({"error": "forbidden"}, 403)
             return self._api_get(parsed)
         return super().do_GET()
 
     def do_POST(self):
         parsed = urlparse(self.path)
         if parsed.path.startswith("/api/"):
+            if not self._api_allowed():
+                return self._send_json({"error": "forbidden"}, 403)
             return self._api_post(parsed)
         self.send_error(404, "Not found")
 
     def send_head(self):
-        # Never serve the certificate/private key over the network.
-        if ".vigilo-cert" in self.path:
+        # Never serve the certificate directory (it holds the private key).
+        # Resolve the request to a real filesystem path FIRST: a raw-string
+        # check on self.path is bypassable with URL-encoding (e.g. %2D), but
+        # translate_path() decodes and normalises, so this catches every form.
+        fs = os.path.abspath(self.translate_path(self.path))
+        cert_dir = os.path.abspath(CERT_DIR)
+        if fs == cert_dir or fs.startswith(cert_dir + os.sep):
             self.send_error(404, "Not found")
             return None
         return super().send_head()
